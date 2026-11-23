@@ -1,0 +1,199 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum SystemRole {
+  USER
+  PM
+  SUPERADMIN
+}
+
+enum ProfileCapability {
+  ADVISOR
+  ADVISEE
+}
+
+enum AdvisorAssignmentType {
+  PRIMARY
+  SECONDARY
+}
+
+model User {
+  id            String    @id
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  profile       ResearchProfile?
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  activeMode ProfileCapability?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@unique([providerId, accountId])
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+model ResearchProfile {
+  id              String                 @id @default(cuid())
+  providerId      String?                @unique
+  cidLookupKey    String?                @unique
+  emailAlias      String                 @unique
+  email           String?                @unique
+  fullName        String
+  systemRole      SystemRole             @default(USER)
+  active          Boolean                @default(true)
+  mustChangePassword Boolean              @default(false)
+  position        String                 @default("")
+  positionLevel   String                 @default("")
+  mission         String                 @default("")
+  workGroup       String                 @default("")
+  avatarPath      String?
+  signaturePath   String?
+  userId          String?                @unique
+  user            User?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  capabilities    ProfileCapabilityGrant[]
+  adviseeProjects ResearchProject[]      @relation("AdviseeProjects")
+  advisorProjects ResearchProjectAdvisor[]
+  reviews         AdvisorReview[]
+  comments        AdvisorComment[]
+  updates         ResearchUpdate[]       @relation("UpdateActor")
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+}
+
+model ProfileCapabilityGrant {
+  id           String            @id @default(cuid())
+  profileId    String
+  capability   ProfileCapability
+  profile      ResearchProfile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt    DateTime          @default(now())
+
+  @@unique([profileId, capability])
+  @@index([capability, profileId])
+}
+
+model ResearchProject {
+  id          String   @id @default(cuid())
+  projectCode String   @unique
+  title       String
+  faculty     String?
+  stage       Int      @default(0)
+  stageProgress Int    @default(0)
+  dueDate     DateTime?
+  issue       String   @default("")
+  nextTask    String   @default("")
+  adviseeId   String
+  advisee     ResearchProfile @relation("AdviseeProjects", fields: [adviseeId], references: [id], onDelete: Restrict)
+  advisors    ResearchProjectAdvisor[]
+  reviews     AdvisorReview[]
+  comments    AdvisorComment[]
+  updates     ResearchUpdate[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([adviseeId])
+  @@index([stage])
+  @@index([dueDate])
+  @@index([updatedAt])
+}
+
+model ResearchProjectAdvisor {
+  id             String                 @id @default(cuid())
+  projectId      String
+  advisorId      String
+  assignmentType AdvisorAssignmentType   @default(SECONDARY)
+  project        ResearchProject         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  advisor        ResearchProfile         @relation(fields: [advisorId], references: [id], onDelete: Restrict)
+  assignedAt     DateTime                @default(now())
+
+  @@unique([projectId, advisorId])
+  @@index([advisorId])
+}
+
+model AdvisorReview {
+  id        String   @id @default(cuid())
+  projectId String
+  advisorId String
+  status    String   @default("ยังไม่ส่งตรวจ")
+  note      String   @default("")
+  updatedAt DateTime @updatedAt
+  project   ResearchProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  advisor   ResearchProfile @relation(fields: [advisorId], references: [id], onDelete: Restrict)
+
+  @@unique([projectId, advisorId])
+  @@index([advisorId])
+}
+
+model AdvisorComment {
+  id        String   @id @default(cuid())
+  projectId String
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+  project   ResearchProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author    ResearchProfile @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([projectId, createdAt])
+  @@index([authorId])
+}
+
+model ResearchUpdate {
+  id        String   @id @default(cuid())
+  projectId String
+  actorId   String
+  summary   String
+  createdAt DateTime @default(now())
+  project   ResearchProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  actor     ResearchProfile @relation("UpdateActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([projectId, createdAt])
+}

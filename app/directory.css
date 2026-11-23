@@ -1,0 +1,47 @@
+.email-login-form{display:grid;gap:9px;margin-top:2px}
+.email-login-form>label{color:#54475f;font-size:12px;font-weight:600}
+.email-login-form>input{height:43px;width:100%;border:1px solid #e8e1ec;border-radius:10px;padding:0 12px;color:#342a3d;background:#fff;outline:none}
+.email-login-form>input:focus{border-color:#8863a3;box-shadow:0 0 0 3px #8863a31a}
+.email-login-submit{height:44px;margin-top:4px;border:0;border-radius:10px;background:#f3edf7;color:#5b3477;font-weight:700}
+.email-login-submit:hover{background:#ebe0f1}
+.email-login-form>small{color:#827989;font-size:11px;line-height:1.7}
+.directory-capabilities{grid-column:1/-1;display:flex;align-items:center;gap:16px;min-height:44px;border:1px solid #e8e2ed;border-radius:9px;padding:8px 12px}
+.directory-capabilities legend{padding:0 5px;color:#6f6477;font-size:11px;font-weight:600}
+.directory-capabilities label,.directory-check{display:inline-flex;align-items:center;gap:7px;color:#62576a;font-size:11px}
+.directory-capabilities input,.directory-check input{accent-color:#765197}
+.directory-details{margin-top:8px;color:#6e5c7c}
+.directory-details summary{cursor:pointer;font-size:10px;font-weight:600}
+.directory-details-content{display:grid;gap:8px;min-width:210px;padding:10px;margin-top:6px;border:1px solid #eee8f2;border-radius:10px;background:#fff}
+.directory-details-content>label{display:grid;gap:4px;font-size:10px}
+.directory-details-content .directory-check{display:flex}
+.directory-profile-form{display:grid;gap:7px;border-top:1px solid #f0edf2;padding-top:9px}
+.directory-profile-form>strong{font-size:10px}
+.directory-profile-form>label{display:grid;gap:4px;font-size:10px;color:#6b6173}
+.directory-profile-form input{height:32px;border:1px solid #e8e2ed;border-radius:7px;padding:0 8px;font-size:11px}
+.directory-actions{display:grid;gap:8px;justify-items:start}
+.advisor-review-list{display:grid;gap:7px;margin:6px 0 13px}
+.advisor-review-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 11px;border:1px solid #eee9f2;border-radius:9px;background:#fcfbfd;font-size:11px}
+.advisor-review-row small{display:block;margin-top:3px;color:#908799;font-size:9px}
+.team-directory{padding:23px;border:1px solid #ece7ef;border-radius:16px;background:#fff;box-shadow:0 12px 35px #33204208}
+.team-directory-heading{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:17px}
+.team-directory-heading h2{margin:5px 0 3px;color:#32243d;font-size:18px}
+.team-directory-heading p{margin:0;color:#827989;font-size:12px}
+.team-count{padding:7px 11px;border-radius:999px;background:#f4eef8;color:#6e4789;font-size:11px;font-weight:700}
+.team-member-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.team-member-card{min-width:0;padding:16px;border:1px solid #eee9f2;border-radius:14px;background:linear-gradient(145deg,#fff,#fdfbfd)}
+.team-member-top{display:flex;align-items:center;gap:12px;min-width:0}
+.team-avatar{width:58px;height:58px;flex:none;border:1px solid #e9e1ef;border-radius:18px;object-fit:cover}
+.team-avatar-fallback{display:grid;place-items:center;background:#f4eef8;color:#704d88;font-size:21px;font-weight:700}
+.team-member-name{min-width:0}
+.team-member-name h3{overflow:hidden;margin:0;color:#352943;font-size:14px;text-overflow:ellipsis;white-space:nowrap}
+.team-member-name p{overflow:hidden;margin:5px 0 0;color:#847b8d;font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+.team-role-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.team-role-tags span{padding:5px 8px;border:1px solid #e9e3ed;border-radius:999px;background:#faf8fb;color:#685576;font-size:10px;font-weight:600}
+.team-role-tags .team-role-system{border-color:#e3dcf0;background:#f2eef8;color:#67488a}
+.team-member-details{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:13px 0 0}
+.team-member-details div{min-width:0}
+.team-member-details dt,.team-signature>span{color:#958c9c;font-size:9px}
+.team-member-details dd{overflow:hidden;margin:4px 0 0;color:#51465e;font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+.team-signature{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;padding:8px 10px;border:1px dashed #e7e0ec;border-radius:10px;background:#fff}
+.team-signature img{width:110px;height:38px;object-fit:contain}
+@media(max-width:650px){.team-directory{padding:15px;border-radius:14px}.team-directory-heading h2{font-size:16px}.team-directory-heading p{font-size:11px}.team-member-grid{grid-template-columns:1fr}.directory-capabilities{grid-column:1/-1;flex-wrap:wrap}.directory-details-content{min-width:190px}}
