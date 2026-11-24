@@ -44,9 +44,9 @@ export default function ProviderLogin({ enabled }: { enabled: boolean }) {
 
   return (
     <div className="mt-7 space-y-5">
-      <Button onClick={signIn} disabled={!enabled || loading} className="h-14 w-full justify-between rounded-2xl bg-[#65418a] px-4 text-base shadow-[0_10px_24px_rgba(101,65,138,.2)] hover:bg-[#533473] sm:px-5">
+      <Button onClick={signIn} disabled={!enabled || loading} className="h-13 w-full justify-between rounded-xl bg-[#604080] px-4 text-base hover:bg-[#51336b] sm:px-5">
         <span className="flex items-center gap-3">
-          <span className="grid size-9 place-items-center rounded-xl bg-white/15"><Fingerprint className="size-5" /></span>
+          <span className="grid size-9 place-items-center rounded-lg bg-white/12"><Fingerprint className="size-5" /></span>
           <span>{loading ? "กำลังเชื่อมต่อ ProviderID…" : "เข้าสู่ระบบด้วย ProviderID"}</span>
         </span>
         <ArrowRight className="size-5" />
@@ -64,18 +64,18 @@ export default function ProviderLogin({ enabled }: { enabled: boolean }) {
           Email
           <span className="relative block">
             <Mail className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#8b8294]" />
-            <Input id="login-email" type="email" autoComplete="username" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" className="h-12 rounded-xl border-[#e5dfeb] bg-white pl-10 text-base focus-visible:border-[#9a78b7] focus-visible:ring-[#9a78b7]/20" />
+            <Input id="login-email" type="email" autoComplete="username" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" className="h-12 rounded-lg border-[#e5dfeb] bg-white pl-10 text-base focus-visible:border-[#9a78b7] focus-visible:ring-[#9a78b7]/20" />
           </span>
         </label>
         <label className="block space-y-2 text-sm font-semibold text-[#43384d]" htmlFor="login-password">
           รหัสผ่าน
           <span className="relative block">
             <LockKeyhole className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#8b8294]" />
-            <Input id="login-password" type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} placeholder="รหัสผ่านของคุณ" className="h-12 rounded-xl border-[#e5dfeb] bg-white pl-10 text-base focus-visible:border-[#9a78b7] focus-visible:ring-[#9a78b7]/20" />
+            <Input id="login-password" type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} placeholder="รหัสผ่านของคุณ" className="h-12 rounded-lg border-[#e5dfeb] bg-white pl-10 text-base focus-visible:border-[#9a78b7] focus-visible:ring-[#9a78b7]/20" />
           </span>
         </label>
         {error && <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-6 text-rose-800" role="alert">{error}</p>}
-        <Button type="submit" variant="outline" disabled={loading} className="h-12 w-full rounded-xl border-[#e3dce9] bg-white text-base text-[#49375a] hover:bg-[#faf8fc]">
+        <Button type="submit" variant="outline" disabled={loading} className="h-12 w-full rounded-lg border-[#e3dce9] bg-white text-base text-[#49375a] hover:bg-[#faf8fc]">
           {loading ? "กำลังเข้าสู่ระบบ…" : "เข้าสู่ระบบด้วย Email"}
         </Button>
         <p className="text-center text-sm leading-6 text-[#817989]">ใช้ได้หลังจากเชื่อมบัญชี ProviderID และตั้งรหัสผ่านแล้ว</p>

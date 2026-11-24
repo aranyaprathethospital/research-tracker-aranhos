@@ -66,6 +66,7 @@ export async function POST(request: Request) {
   const access = await requireManager(request);
   if (access.error) return access.error;
   const body = await request.json().catch(() => null);
+  if (!body || typeof body !== "object") return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   const fullName = typeof body?.fullName === "string" ? body.fullName.trim() : typeof body?.displayName === "string" ? body.displayName.trim() : "";
   const cid = typeof body?.cid === "string" ? body.cid : "";
   const cidLookupKey = cidLookupKeyFromCid(cid);
@@ -76,6 +77,9 @@ export async function POST(request: Request) {
   }
   if (!canManageSystemRoles(access.context.profile.systemRole) && role !== SystemRole.USER) {
     return NextResponse.json({ error: "PM can only create regular users. Superadmin assigns PM and Superadmin roles." }, { status: 403 });
+  }
+  if (role === SystemRole.USER && selectedCapabilities.length === 0) {
+    return NextResponse.json({ error: "A regular user must have at least one work capability." }, { status: 400 });
   }
   const email = typeof body.email === "string" && body.email.trim() ? body.email.trim().toLowerCase() : null;
   if (email && !emailPattern.test(email)) return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
@@ -131,6 +135,11 @@ export async function PATCH(request: Request) {
   if (body.capabilities !== undefined) {
     nextCapabilities = parseCapabilities(body.capabilities) ?? undefined;
     if (!nextCapabilities) return NextResponse.json({ error: "Invalid capabilities." }, { status: 400 });
+  }
+  const resultingSystemRole = nextSystemRole ?? target.systemRole;
+  const resultingCapabilities = nextCapabilities ?? target.capabilities.map((grant) => grant.capability);
+  if (resultingSystemRole === SystemRole.USER && resultingCapabilities.length === 0) {
+    return NextResponse.json({ error: "A regular user must have at least one work capability." }, { status: 400 });
   }
   for (const field of ["fullName", "position", "positionLevel", "mission", "workGroup"] as const) {
     if (body[field] === undefined) continue;

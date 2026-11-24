@@ -1,91 +1,220 @@
 # Research Tracker
 
-เว็บแอปติดตามความก้าวหน้างานวิจัย ใช้ Next.js App Router, React, TypeScript, Tailwind CSS, Better Auth และ Prisma 7.10.1 กับ PostgreSQL บน Supabase
+ระบบติดตามความก้าวหน้างานวิจัยสำหรับผู้จัดการโครงการ (PM), อาจารย์ที่ปรึกษา (Advisor) และผู้ทำวิจัย (Advisee) สร้างด้วย Next.js App Router, TypeScript, Tailwind CSS v4, Better Auth, Prisma 7 และ PostgreSQL บน Supabase
 
-## สิ่งที่ทำได้
+## ความสามารถหลัก
 
-- PM ดู Dashboard, ค้นหา/กรองงาน, สร้างงาน, จัดการรายชื่อและบทบาท และมอบหมาย Advisor ได้หลายคน
-- Advisor เห็นเฉพาะโครงการที่ได้รับมอบหมาย เปลี่ยนสถานะการตรวจแยกจากสถานะวิจัย และเพิ่มความเห็น
-- Advisee เห็นเฉพาะโครงการของตน อัปเดตขั้นตอน เปอร์เซ็นต์ในขั้น ปัญหา งานถัดไป และกำหนดส่ง
-- ทุกการแก้ไขจากแอปจริงตรวจ session และ role ฝั่ง server ก่อนเรียก Prisma; เก็บประวัติและแยกสถานะตรวจของ Advisor ต่อโครงการ
-- Email/Password และการสมัครสมาชิกเองปิดไว้; ใช้ ProviderID เป็นทางเข้าหลัก
+- เข้าระบบด้วย ProviderID ผ่าน MOPH โดยระบบอนุญาตเฉพาะ CID ที่ PM หรือ Superadmin ลงทะเบียนไว้และบัญชียังเปิดใช้งานอยู่
+- ตั้งค่าอีเมลและรหัสผ่านสำรองหลังเข้าสู่ระบบด้วย ProviderID ได้ รหัสผ่านยาว 6–128 ตัวอักษร
+- เก็บข้อมูลผู้ใช้ ได้แก่ ชื่อเต็ม, CID สำหรับจับคู่บัญชี, ตำแหน่ง, ระดับตำแหน่ง, ภารกิจ, กลุ่มงาน, อีเมล, รูปโปรไฟล์ และรูปลายเซ็น
+- กำหนดบทบาทระบบและความสามารถในการทำงานแยกกัน ผู้ใช้ที่ได้รับทั้ง Advisor และ Advisee เลือกโหมดทำงานได้
+- ติดตามโครงการวิจัย ขั้นตอน ความคืบหน้า ปัญหา งานถัดไป และวันกำหนดส่ง
+- กำหนด Advisor หลักหนึ่งคนต่อโครงการ และ Advisor รองได้หลายคน
+- แยกผลการตรวจและความคิดเห็นตาม Advisor พร้อมบันทึกประวัติการอัปเดตโครงการ
+- เก็บรูปโปรไฟล์และลายเซ็นใน Supabase Storage แบบ private พร้อมใช้ signed URL อายุจำกัด
 
-เปอร์เซ็นต์ 0–100 เป็นความคืบหน้าภายในขั้นตอนปัจจุบัน แยกจากรหัสขั้นตอน 0–7 ไม่ได้นำเลขขั้นตอนมาคำนวณเปอร์เซ็นต์
+ระบบไม่สร้างบัญชีให้เองเมื่อพบ ProviderID ที่ไม่รู้จัก และไม่มีข้อมูลตัวอย่างหรือ route สำหรับ demo ให้เพิ่มผู้ใช้และกำหนดสิทธิ์ผ่าน Superadmin/PM ก่อนเริ่มใช้งานจริง
 
-## ข้อมูลรายชื่อและการนำเข้า
+## เทคโนโลยี
 
-ระบบไม่มีรายชื่อสาธิตในฐานข้อมูล เพิ่มผู้ใช้และกำหนดสิทธิ์จากเมนู “จัดการผู้ใช้” หลังตั้งค่า Supabase และสร้าง Superadmin แล้ว
+- Next.js 16 App Router, React 19, TypeScript/TSX
+- Tailwind CSS v4 และ shadcn/ui ที่ใช้ Base UI
+- Better Auth สำหรับ session และการยืนยันตัวตน
+- Prisma 7 และ PostgreSQL บน Supabase
+- TanStack Table, React Hook Form, Zod, lucide-react, date-fns, Sonner, Framer Motion, GSAP, Three.js และ Recharts ตามความเหมาะสมของฟีเจอร์
+- ใช้ pnpm และเก็บ dependency lockfile ใน `pnpm-lock.yaml`
 
-ก่อนนำเข้ารายชื่อจากไฟล์ ให้ตรวจสอบจำนวนรายชื่อและการจับคู่ Advisor กับผู้ดูแลระบบก่อน
+## โครงสร้างโปรเจกต์
 
-## เริ่มรันระบบ
-
-ต้องใช้ Node.js ที่รองรับ Next.js 16
-
-```bash
-npm install
-npm run dev
+```text
+app/
+  (auth)/                 หน้า login, ตั้งค่าบัญชี, เปลี่ยนรหัสผ่าน และเลือกโหมด
+  (workspace)/            layout และหน้า workspace ที่ต้องเข้าสู่ระบบ
+  api/                    route handlers สำหรับ auth, profile, users และ projects
+  globals.css             จุดนำเข้า Tailwind และ theme tokens ของแอป
+components/ui/            shared UI primitives จาก shadcn/Base UI
+features/
+  auth/components/        UI สำหรับเข้าสู่ระบบและจัดการ credential
+  profile/components/     UI ข้อมูลส่วนตัว
+  research/components/    dashboard และงานวิจัย
+  team/components/        directory ทีม
+  users/components/       จัดการผู้ใช้
+lib/                      auth, Prisma, access checks, storage และ domain services
+prisma/
+  schema.prisma           data model
+  migrations/             migration history
+scripts/                  งานดูแลระบบ เช่น bootstrap Superadmin
 ```
 
-เปิด [http://localhost:3000/login](http://localhost:3000/login) เพื่อลงชื่อเข้าใช้ ระบบจะเปิด Dashboard หลังยืนยันตัวตนสำเร็จ
+ให้เก็บหน้าและ layout สำหรับ routing ไว้ใน `app/` ส่วน UI/workflow ของแต่ละความสามารถอยู่ใน `features/<feature>/components/` และ primitive ที่นำกลับมาใช้ซ้ำอยู่ใน `components/ui/` ดูกฎการพัฒนาเพิ่มเติมใน [AGENTS.md](AGENTS.md)
 
-ตรวจ build และ lint:
+## บทบาทและสิทธิ์
 
-```bash
-npm run build
-npm run lint
-```
+| บทบาทระบบ | สิทธิ์หลัก |
+| --- | --- |
+| `SUPERADMIN` | จัดการผู้ใช้และโครงการ รวมถึงกำหนดบทบาทระบบ เช่น PM หรือ Superadmin |
+| `PM` | จัดการผู้ใช้ทั่วไปและความสามารถ Advisor/Advisee รวมถึงสร้าง/จัดการโครงการและมอบหมาย Advisor |
+| `USER` | บัญชีผู้ใช้ทั่วไป สิทธิ์ทำงานขึ้นกับความสามารถที่ได้รับ |
 
-## ตั้งค่า Supabase PostgreSQL และ Prisma
+ความสามารถในการทำงานแยกจากบทบาทระบบ:
 
-1. สร้าง Supabase project แล้วคัดลอก `.env.example` เป็น `.env.local` หรือ `.env`
-2. กำหนด `DATABASE_URL` เป็น Supavisor transaction pooler พอร์ต `6543` สำหรับแอป และ `DIRECT_URL` เป็น session pooler พอร์ต `5432` สำหรับ Prisma migrate
-3. กำหนด `BETTER_AUTH_SECRET` เป็นค่า random อย่างน้อย 32 ตัวอักษร และ `BETTER_AUTH_URL` เป็น URL ของแอป
-4. สร้างตารางจาก Prisma schema:
+- `ADVISEE`: ดูและอัปเดตโครงการของตนเอง เช่น ขั้นตอน ความคืบหน้า ปัญหา งานถัดไป และกำหนดส่ง
+- `ADVISOR`: ดูโครงการที่ได้รับมอบหมาย อัปเดตผลตรวจและแสดงความคิดเห็นของตนเอง
+- ผู้ใช้ที่มีทั้งสองความสามารถเลือกโหมด Advisor หรือ Advisee ได้ ส่วนผู้ใช้ที่มีเพียงหนึ่งความสามารถจะเข้าโหมดนั้นโดยอัตโนมัติ
+- API ตรวจ session, สถานะบัญชี, บทบาท และโหมดทำงานบน server ทุกครั้ง การซ่อนปุ่มในหน้าเว็บไม่ใช่การควบคุมสิทธิ์
+
+## เตรียมเครื่องและเริ่มใช้งาน
+
+ต้องติดตั้ง Node.js เวอร์ชันที่รองรับโดย Next.js ในโปรเจกต์ และ pnpm
+
+1. ติดตั้ง dependencies:
 
    ```bash
-   npm run db:generate
-   npm run db:migrate
+   pnpm install
    ```
 
-   คำสั่ง migrate ใช้ `DIRECT_URL`
-5. สำหรับอัปโหลดรูปโปรไฟล์และลายเซ็น ให้กำหนด `SUPABASE_URL` และ `SUPABASE_SECRET_KEY` (หรือ legacy `SUPABASE_SERVICE_ROLE_KEY`) ใน `.env` ฝั่ง server เท่านั้น migration สร้าง bucket แบบ private ไว้ให้แล้ว ห้ามตั้ง key นี้เป็น `NEXT_PUBLIC_*`
-6. กำหนดค่า MOPH ตามหัวข้อถัดไป จากนั้นสร้าง Superadmin คนแรกโดยกรอก CID แบบไม่บันทึกลงไฟล์ env แล้วเรียกสคริปต์:
+2. สร้างไฟล์ `.env` จากตัวอย่าง:
 
    ```powershell
-   $env:BOOTSTRAP_SUPERADMIN_CID = Read-Host "CID 13 หลัก"
-   $env:BOOTSTRAP_SUPERADMIN_NAME = Read-Host "ชื่อที่แสดง"
-   npm run db:bootstrap-superadmin
-   Remove-Item Env:BOOTSTRAP_SUPERADMIN_CID, Env:BOOTSTRAP_SUPERADMIN_NAME
+   Copy-Item .env.example .env
    ```
 
-7. เปิดเว็บด้วย `npm run dev`; Superadmin เพิ่มผู้ใช้จากเมนู “จัดการผู้ใช้” โดยใส่ CID ชื่อ และสิทธิ์ PM จัดการสิทธิ์ Advisor/Advisee ส่วน Superadmin เท่านั้นที่กำหนด PM/Superadmin ได้ ผู้ใช้จะล็อกอินได้หลัง CID ถูกลงทะเบียนและบัญชีเปิดใช้งาน
-8. หลัง ProviderID login ครั้งแรก ผู้ใช้ตั้ง email/password สำรองได้จากหน้า setup; PM ออก temporary password ให้บัญชีที่เชื่อมแล้วได้ และผู้ใช้ต้องเปลี่ยนรหัสผ่านเมื่อเข้าใช้ครั้งถัดไป
-9. สร้างโครงการโดยกำหนด Advisor หลักหนึ่งคน และ Advisor รองได้หลายคน ผลตรวจเก็บแยกตาม Advisor โดยสถานะภาพรวมยึดผลของ Advisor หลัก
-10. นำเข้าข้อมูล Excel หลังตรวจสอบ 18/19 รายชื่อและการจับคู่ Advisor แล้ว
+   กรอกค่าจริงของ Supabase และ MOPH ในเครื่องหรือ secret manager ของ deployment เท่านั้น ห้าม commit `.env`
 
-สคริปต์ `dev` และ `start` เปิดใช้ trusted CA จากระบบปฏิบัติการให้ Node.js สำหรับ TLS ของ Prisma 7 กับ Supabase หากโฮสต์แอปโดยไม่เรียกสคริปต์เหล่านี้ ให้ตั้ง `NODE_OPTIONS=--use-system-ca` ใน environment ฝั่ง server
+   Prisma CLI ใช้การตั้งค่าใน `prisma7.config.ts` ซึ่งอ่าน `.env.local` ก่อน แล้วอ่าน `.env`; สำหรับ migration จะเลือก `DIRECT_URL` ก่อน `DATABASE_URL` หากมีทั้งสองค่า
 
-Better Auth session และ role อยู่ในฐานข้อมูลของแอปผ่าน Prisma; ไม่ใช้ Supabase Auth ซ้ำ RLS เปิดบนตารางและถอนสิทธิ์ `anon` / `authenticated` ของ Data API เนื่องจาก session ของ Better Auth ไม่ได้สร้าง `auth.uid()` ของ Supabase การอ่านเขียนทั้งหมดจึงผ่าน server route ที่ตรวจ role แล้วเท่านั้น ห้ามเปิด connection string หรือ Better Auth secret ไปฝั่ง browser
+3. สร้าง `BETTER_AUTH_SECRET` ในเครื่องด้วยคำสั่งนี้ แล้วนำผลลัพธ์ไปใส่ใน `.env` โดยใช้ค่าเดิมต่อเนื่องระหว่าง deployment:
 
-## ขอเปิดใช้งาน MOPH ProviderID
+   ```bash
+   node --input-type=module -e "import { randomBytes } from 'node:crypto'; console.log(randomBytes(32).toString('base64url'))"
+   ```
 
-ติดต่อ MOPH/ผู้ดูแล Health ID และ Provider ID เพื่อขอข้อมูลและลงทะเบียน:
+4. สร้าง Prisma client และติดตั้ง migration:
 
-- Health ID OAuth: Client ID และ Client Secret
-- Provider ID API: Client ID และ Secret Key
-- ลงทะเบียน Redirect URI ให้ตรงทุกอักขระ: `https://<โดเมนของแอป>/api/auth/callback/provider-id` (สำหรับ local ใช้ `http://localhost:3000/api/auth/callback/provider-id`)
-- ขอเปิดสิทธิ์ environment UAT ก่อน แล้วจึงขอ production เมื่อผ่านการทดสอบ
-- ใส่ค่าใน `MOPH_HEALTH_ID_CLIENT_ID`, `MOPH_HEALTH_ID_CLIENT_SECRET`, `MOPH_PROVIDER_ID_CLIENT_ID`, `MOPH_PROVIDER_ID_SECRET_KEY` และตั้ง `MOPH_ENV=UAT` หรือ `PRD`
+   ```bash
+   pnpm db:generate
+   pnpm db:migrate
+   ```
 
-ในเอกสาร MOPH flow เริ่มที่ Health ID authorization code, แลก Health ID access token ฝั่ง server, แลก token ของ Provider ID แล้วอ่าน profile ของ Provider ID ต่อ ฝั่งแอปทำทั้ง token exchange และ profile lookup ใน Better Auth Generic OAuth callback ไม่ส่ง token หรือ secret ไป browser ระบบใช้ `hash_cid` จาก ProviderID จับคู่กับ CID ที่ลงทะเบียนไว้ก่อน โดยเก็บเป็น HMAC fingerprint ที่ผูกกับ `BETTER_AUTH_SECRET` ไม่เก็บเลข CID จริง; เก็บ Provider ID, ชื่อแสดง และ role ในฐานข้อมูล และล้าง OAuth access/refresh/id token หลังอ่าน profile แล้ว
+5. ตั้งค่า MOPH ProviderID ตามหัวข้อด้านล่าง แล้วเริ่มเซิร์ฟเวอร์:
 
-ถ้า MOPH เปลี่ยน endpoint, header หรือรูปแบบ response ให้ตรวจคู่มือล่าสุดก่อนเปิด production ค่า Redirect URI ต้องตรงกับค่าที่ลงทะเบียน หาก CID ยังไม่อยู่ในรายชื่อหรือบัญชีถูกปิด ระบบจะไม่สร้างบัญชีให้เอง `BETTER_AUTH_SECRET` ต้องคงเดิมตราบใดที่มี CID allowlist เพราะใช้สร้างค่า lookup fingerprint
+   ```bash
+   pnpm dev
+   ```
 
-## หมายเหตุ
+เปิด [http://localhost:3000/login](http://localhost:3000/login)
 
-- ไม่เชื่อม MOPH Notify ใน MVP
-- ProviderID เป็นข้อมูลยืนยันตัวตน ส่วนบทบาท/สิทธิ์กำหนดจาก `ResearchProfile`; Superadmin จัดการผู้ใช้และ PM จัดการงานวิจัย
-- รูปและลายเซ็นเก็บใน Supabase Storage แบบ private; สมาชิกที่ล็อกอินแล้วดูโปรไฟล์ทีมได้ ลายเซ็นใช้แสดงในโปรไฟล์เท่านั้น ไม่ใช่การลงนามอนุมัติเอกสาร
-- `DATABASE_URL`, `DIRECT_URL`, `BETTER_AUTH_SECRET`, `SUPABASE_SECRET_KEY` และ MOPH secrets เป็น server-only ห้าม commit
-- Dashboard และการเข้าสู่ระบบต้องตั้งค่า Supabase, MOPH และ bootstrap Superadmin ก่อนใช้งาน
+## ตัวแปรสภาพแวดล้อม
+
+ชื่อและ placeholder ใน `.env.example` เป็นแหล่งอ้างอิงหลัก ค่าต่อไปนี้เป็น server-only เว้นแต่ระบุไว้เป็นอย่างอื่น:
+
+| ตัวแปร | ใช้ทำอะไร |
+| --- | --- |
+| `DATABASE_URL` | การเชื่อมต่อ PostgreSQL ขณะ runtime; ตัวอย่างใช้ Supabase Transaction Pooler port `6543` |
+| `DIRECT_URL` | Prisma migrations และสคริปต์ bootstrap; ตัวอย่างใช้ Supabase Session Pooler port `5432` |
+| `BETTER_AUTH_SECRET` | secret ของ Better Auth และ HMAC สำหรับจับคู่ CID ต้องมีอย่างน้อย 32 ตัวอักษรและต้องคงเดิม |
+| `BETTER_AUTH_URL` | base URL ของแอป เช่น `http://localhost:3000` |
+| `SUPABASE_URL` | URL ของ Supabase project ใช้กับ Storage |
+| `SUPABASE_SECRET_KEY` | server-side key สำหรับ Storage; โค้ดยังรองรับชื่อเก่า `SUPABASE_SERVICE_ROLE_KEY` |
+| `MOPH_ENV` | `UAT` สำหรับทดสอบ หรือ `PRD` สำหรับระบบจริง |
+| `MOPH_HEALTH_ID_CLIENT_ID` | Client ID ของ MOPH Health ID |
+| `MOPH_HEALTH_ID_CLIENT_SECRET` | Client secret ของ MOPH Health ID |
+| `MOPH_PROVIDER_ID_CLIENT_ID` | Client ID ของ ProviderID |
+| `MOPH_PROVIDER_ID_SECRET_KEY` | Secret key ของ ProviderID |
+| `MOPH_REDIRECT_URI` | Callback URL ที่ลงทะเบียนกับ MOPH ต้องตรงทุกตัวอักษร |
+
+Callback สำหรับ local โดยปกติคือ `http://localhost:3000/api/auth/callback/provider-id` และสำหรับ deployment คือ `https://<โดเมนแอป>/api/auth/callback/provider-id` ค่า `BETTER_AUTH_URL`, `MOPH_REDIRECT_URI` และ URL ที่ลงทะเบียนกับ MOPH ต้องสอดคล้องกัน
+
+การเชื่อมต่อฐานข้อมูลตามตัวอย่าง:
+
+- `DATABASE_URL`: Transaction Pooler, port `6543`, เหมาะกับ runtime ที่เปิด connection สั้น ๆ
+- `DIRECT_URL`: Session Pooler, port `5432`, ใช้กับ Prisma migrate และ bootstrap script
+- ใส่ `sslmode=require` และ URL-encode อักขระพิเศษในรหัสผ่านฐานข้อมูลก่อนใส่ใน connection string
+
+`SUPABASE_SECRET_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, MOPH secrets, database URLs และ `BETTER_AUTH_SECRET` ต้องไม่ขึ้นต้นด้วย `NEXT_PUBLIC_` และห้ามส่งไปยัง browser
+
+### ตัวแปร bootstrap Superadmin
+
+สคริปต์เริ่มต้นอ่าน `BOOTSTRAP_SUPERADMIN_CID` และ `BOOTSTRAP_SUPERADMIN_NAME` จาก environment ชั่วคราว ไม่ต้องเก็บสองค่านี้ใน `.env` และไม่ต้องตั้ง `INITIAL_PM_PROVIDER_ID`/`INITIAL_PM_DISPLAY_NAME` สคริปต์สร้างรายการ CID ของ Superadmin คนแรกเท่านั้น เมื่อมี active Superadmin แล้ว ให้ใช้หน้า user directory เพื่อกำหนดบทบาทและจัดการผู้ใช้
+
+ตัวอย่าง PowerShell:
+
+```powershell
+$env:BOOTSTRAP_SUPERADMIN_CID = Read-Host "CID 13 หลัก"
+$env:BOOTSTRAP_SUPERADMIN_NAME = Read-Host "ชื่อที่แสดง"
+pnpm db:bootstrap-superadmin
+Remove-Item Env:BOOTSTRAP_SUPERADMIN_CID, Env:BOOTSTRAP_SUPERADMIN_NAME
+```
+
+สคริปต์ตรวจเลข CID 13 หลักและ checksum, ต้องมี `DIRECT_URL` กับ `BETTER_AUTH_SECRET`, ปฏิเสธการสร้าง Superadmin ซ้ำเมื่อมี active Superadmin แล้ว และบันทึกเฉพาะ HMAC lookup key ไม่บันทึก CID จริง หลัง bootstrap ให้เข้าสู่ระบบด้วย ProviderID ของ CID ที่ลงทะเบียน จากนั้นสร้างผู้ใช้/กำหนด PM และความสามารถผ่านหน้า user directory ตามสิทธิ์
+
+## ขั้นตอน login และจัดการผู้ใช้
+
+1. Superadmin หรือ PM เพิ่มผู้ใช้จากหน้า user directory พร้อมชื่อและ CID ที่ถูกต้อง จากนั้นกำหนด `USER` และความสามารถ `ADVISOR`, `ADVISEE` หรือทั้งคู่
+2. ผู้ใช้เข้าสู่ระบบผ่าน ProviderID; CID ที่ MOPH ส่งกลับต้องจับคู่กับ profile ที่ลงทะเบียนและยัง active อยู่ ระบบไม่สร้างบัญชีให้อัตโนมัติ
+3. หลัง ProviderID เชื่อมบัญชีสำเร็จ ผู้ใช้ตั้งอีเมลและรหัสผ่านสำรองได้ที่ `/account/setup` รหัสผ่านขั้นต่ำ 6 ตัวอักษรและสูงสุด 128 ตัวอักษร
+4. ครั้งถัดไปใช้ ProviderID หรืออีเมล/รหัสผ่านสำรองได้ หากลืมรหัสผ่านให้ PM/Superadmin ออก temporary password ตาม workflow ใน user directory และผู้ใช้ต้องเปลี่ยนรหัสผ่านเมื่อเข้าสู่ระบบ
+5. ผู้ใช้ที่มีทั้ง Advisor และ Advisee เลือกโหมดได้ที่ `/choose-role`; การเลือกนี้เปลี่ยนบริบทงานของ session แต่ไม่เพิ่มสิทธิ์ใหม่
+
+## Supabase Storage
+
+Migration สร้าง bucket ชื่อ `research-profile-files` เป็น private จำกัดไฟล์ภาพ JPEG, PNG และ WebP ขนาดไม่เกิน 5 MB โค้ดอัปโหลดและสร้าง signed URL จาก server โดย signed URL มีอายุเริ่มต้นหนึ่งชั่วโมง ต้องตั้ง `SUPABASE_URL` และ `SUPABASE_SECRET_KEY` (หรือ `SUPABASE_SERVICE_ROLE_KEY` เดิม) เพื่อใช้รูปและลายเซ็น เก็บรูปไว้สำหรับข้อมูลโปรไฟล์เท่านั้น ลายเซ็นไม่ใช่การอนุมัติเอกสารอิเล็กทรอนิกส์
+
+## Data model โดยสรุป
+
+- `User`, `Session`, `Account`, `Verification`: Better Auth users, sessions, ProviderID และ credential email/password
+- `ResearchProfile`: CID lookup key, ProviderID, ชื่อ ข้อมูลตำแหน่ง/ภารกิจ บทบาทระบบ สถานะบัญชี ข้อมูลติดต่อและ path ของไฟล์โปรไฟล์
+- `ProfileCapabilityGrant`: ความสามารถ `ADVISOR` และ `ADVISEE`
+- `ResearchProject`: รหัส/ชื่อโครงการ ผู้ทำวิจัย ขั้นตอน ความคืบหน้า ปัญหา งานถัดไปและกำหนดส่ง
+- `ResearchProjectAdvisor`: การมอบหมาย Advisor หลัก/รอง โดยมี unique constraint ให้มี Advisor หลักได้หนึ่งคนต่อโครงการ
+- `AdvisorReview`, `AdvisorComment`, `ResearchUpdate`: ผลตรวจ ความเห็น และประวัติการเปลี่ยนแปลง
+
+CID จริงไม่ถูกเก็บใน `ResearchProfile`; ระบบ normalize CID แล้วสร้าง HMAC lookup key จากค่า hash ที่ MOPH ส่งมาและ `BETTER_AUTH_SECRET` เพื่อจับคู่บัญชี
+
+## Routes สำคัญ
+
+| URL | หน้าที่ |
+| --- | --- |
+| `/login` | เข้าสู่ระบบด้วย ProviderID หรืออีเมล/รหัสผ่าน |
+| `/account/setup` | ตั้งอีเมลและรหัสผ่านสำรองหลัง ProviderID login |
+| `/account/password` | ตั้งหรือเปลี่ยนรหัสผ่าน |
+| `/choose-role` | เลือก Advisor/Advisee เมื่อได้รับทั้งสองความสามารถ |
+| `/` | dashboard/workspace หลังเข้าสู่ระบบ |
+| `/profile` | ดูและแก้ไขข้อมูลส่วนตัว |
+
+API handlers อยู่ใต้ `app/api/` สำหรับ auth, account, profile, media, users, team และ projects โดยแต่ละ handler ต้องตรวจ session และสิทธิ์บน server
+
+## คำสั่งที่มีในโปรเจกต์
+
+| คำสั่ง | หน้าที่ |
+| --- | --- |
+| `pnpm dev` | เปิด Next.js development server |
+| `pnpm build` | สร้าง production build |
+| `pnpm start` | เปิด production server หลัง build |
+| `pnpm lint` | รัน ESLint |
+| `pnpm db:generate` | สร้าง Prisma client |
+| `pnpm db:migrate` | นำ migration ที่ commit แล้วไปใช้กับฐานข้อมูล (`prisma migrate deploy`) |
+| `pnpm db:migrate:dev --name <ชื่อ>` | สร้าง/นำ migration ไปใช้ใน development หลังแก้ Prisma schema |
+| `pnpm db:deploy` | alias สำหรับ deploy migrations |
+| `pnpm db:bootstrap-superadmin` | สร้าง CID allowlist สำหรับ Superadmin คนแรก |
+
+อย่าแก้ migration เดิมที่นำไปใช้แล้ว ให้สร้าง migration ใหม่เสมอ ตรวจทานผลกระทบต่อข้อมูลก่อน deploy
+
+## แก้ปัญหาเบื้องต้น
+
+- **เชื่อม PostgreSQL ไม่ได้:** ตรวจ hostname, ชื่อผู้ใช้, password ที่ URL-encode แล้ว, `sslmode=require`, port `6543` ของ `DATABASE_URL` และ port `5432` ของ `DIRECT_URL`; สคริปต์ bootstrap ต้องมี `DIRECT_URL`
+- **Prisma แจ้ง Invalid URL:** ตรวจรูปแบบ connection string ใน `.env` ว่าไม่มี backslash ต่อท้าย, quote เกิน หรือช่องว่างใน URL; ตรวจว่าค่าที่รันจริงถูกโหลดจากไฟล์ environment ที่ตั้งใจใช้
+- **ProviderID callback error:** ตรวจ client IDs/secrets, environment `UAT`/`PRD`, `BETTER_AUTH_URL`, และ callback URI ที่ลงทะเบียนกับ MOPH ให้ตรงกัน
+- **เข้าสู่ระบบแล้วไม่พบผู้ใช้หรือถูกปฏิเสธ:** ต้องมี profile ที่ CID ตรง, `active = true` และ capability ถูกกำหนดไว้ก่อน login; ProviderID ที่ไม่รู้จักจะไม่สร้างบัญชีเอง
+- **อีเมล/รหัสผ่านใช้ไม่ได้:** ให้ผู้ใช้ทำ ProviderID login ครั้งแรกและตั้งค่าที่ `/account/setup`; ตรวจว่าอีเมลสำรองตรงกับ profile และรหัสผ่านยาวอย่างน้อย 6 ตัวอักษร
+- **รูป/ลายเซ็นไม่ขึ้น:** ตรวจ `SUPABASE_URL`, server-side Storage key และ migration ที่สร้าง private bucket `research-profile-files`; ตรวจชนิดไฟล์และขนาดไม่เกิน 5 MB
+- **CID ที่ลงทะเบียนไว้จับคู่ไม่ได้หลังเปลี่ยน secret:** ตรวจ `BETTER_AUTH_SECRET` ว่ายังเป็นค่าเดิม เพราะค่า HMAC lookup key ผูกกับ secret นี้
+
+## ข้อควรระวังด้านข้อมูล
+
+- ไม่ commit `.env`, credentials, CID จริง หรือไฟล์ผู้ใช้
+- ไม่ส่ง database/storage/MOPH secrets ไป client และไม่ log CID หรือ token
+- ไม่ย้ายการตรวจสิทธิ์ไป client; ตรวจ session, active profile, system role และ capability ใน server/API
+- อย่าเปิด bucket เป็น public หรืออนุญาต browser ให้เข้าถึง database โดยตรง
+- ถ้าจะเพิ่ม Supabase Data API access ต้องออกแบบ RLS และ policy แบบจำกัดแถวก่อนให้สิทธิ์ `anon`/`authenticated`
+- สำรองฐานข้อมูลและทดสอบ migration ใน environment ที่ไม่ใช่ production ก่อน deploy

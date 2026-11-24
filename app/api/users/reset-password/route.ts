@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { randomInt } from "node:crypto";
 import { NextResponse } from "next/server";
 import { SystemRole } from "@/generated/prisma/client";
 import { saveCredentialPassword } from "@/lib/credentials";
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Only Superadmin can reset a PM or Superadmin password." }, { status: 403 });
   }
 
-  const temporaryPassword = randomBytes(18).toString("base64url");
+  const temporaryPassword = randomInt(100_000, 1_000_000).toString();
   await prisma.$transaction(async (tx) => {
     await saveCredentialPassword(target.userId!, temporaryPassword, tx);
     await tx.researchProfile.update({ where: { id: target.id }, data: { mustChangePassword: true } });

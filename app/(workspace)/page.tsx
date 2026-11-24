@@ -1,3 +1,4 @@
+import Dashboard from "@/features/research/components/dashboard";
 import { prisma } from "@/lib/prisma";
 import { isProviderIdConfigured } from "@/lib/provider-id";
 import { projectInclude, toResearchItem } from "@/lib/research-data";
@@ -5,11 +6,11 @@ import { canManageProjects, canManageUsers } from "@/lib/roles";
 import { getSignedInProfile } from "@/lib/server-access";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import Dashboard from "@/features/research/components/dashboard";
+import Loading from "./loading";
 
 export default function Home() {
   return (
-    <Suspense fallback={<main className="grid min-h-[70svh] place-items-center px-4 text-base text-[#777080]">กำลังตรวจสอบบัญชีและโหลดงานวิจัย…</main>}>
+    <Suspense fallback={<Loading />}>
       <ResearchDashboard />
     </Suspense>
   );
@@ -20,7 +21,10 @@ async function ResearchDashboard() {
   const authContext = await getSignedInProfile();
   if (!authContext) redirect("/login");
   const { profile, activeMode, session } = authContext;
-  const credential = await prisma.account.findFirst({ where: { userId: session.user.id, providerId: "credential" }, select: { id: true } });
+  const credential = await prisma.account.findFirst({
+    where: { userId: session.user.id, providerId: "credential" },
+    select: { id: true },
+  });
   if (!credential) redirect("/account/setup");
   if (profile.mustChangePassword) redirect("/account/password");
 
@@ -45,20 +49,28 @@ async function ResearchDashboard() {
         orderBy: { fullName: "asc" },
       })
     : [];
-  const activeRole = activeMode === "ADVISOR"
-    ? "Advisor"
-    : activeMode === "ADVISEE"
-      ? "Advisee"
-      : profile.systemRole === "SUPERADMIN"
-        ? "Superadmin"
-        : "PM";
+  const activeRole =
+    activeMode === "ADVISOR"
+      ? "Advisor"
+      : activeMode === "ADVISEE"
+        ? "Advisee"
+        : profile.systemRole === "SUPERADMIN"
+          ? "Superadmin"
+          : "PM";
 
   return (
     <Dashboard
       key={`${profile.id}:${activeMode ?? profile.systemRole}`}
-      initialItems={records.map((record) => toResearchItem(record, activeMode === "ADVISOR" ? profile.id : undefined))}
+      initialItems={records.map((record) =>
+        toResearchItem(
+          record,
+          activeMode === "ADVISOR" ? profile.id : undefined,
+        ),
+      )}
       role={activeRole}
-      availableRoles={availableModes.map((mode) => mode === "ADVISOR" ? "Advisor" : "Advisee")}
+      availableRoles={availableModes.map((mode) =>
+        mode === "ADVISOR" ? "Advisor" : "Advisee",
+      )}
       systemRole={profile.systemRole}
       personName={profile.fullName}
       directory={directory.map((person) => ({

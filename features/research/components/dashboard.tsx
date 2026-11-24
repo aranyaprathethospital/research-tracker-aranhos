@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { differenceInCalendarDays, format, parseISO } from "date-fns";
 import { th } from "date-fns/locale";
 import {
-  ArrowDownRight, ArrowRight, Bell, BookOpenCheck, CalendarDays, Check,
-  ChevronDown, CircleAlert, Clock3, FolderKanban, LayoutDashboard, LogOut,
-  MessageCircle, Plus, Search, ShieldCheck, Users, UserRoundCog,
+  ArrowDownRight, ArrowRight, BookOpenCheck, CalendarDays, Check,
+  ChevronDown, CircleAlert, Clock3, MessageCircle, Plus, Search, Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { stages, type Research, type ReviewStatus, type Role } from "@/lib/research-types";
@@ -19,32 +17,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import UserDirectory from "@/features/users/components/user-directory";
 import TeamDirectory, { type TeamMember } from "@/features/team/components/team-directory";
+import PageHeading from "@/features/workspace/components/page-heading";
+import WorkspaceShell from "@/features/workspace/components/workspace-shell";
+import type { UserDirectoryPerson } from "@/features/users/types";
 
-type DirectoryPerson = {
-  id: string; name: string; systemRole: string; capabilities: string[]; email?: string;
-  position?: string; positionLevel?: string; mission?: string; workGroup?: string;
-  providerId?: string | null; cidRegistered?: boolean; active?: boolean; userId?: string | null;
-  avatarUrl?: string | null; signatureUrl?: string | null;
-};
 type ResearchChanges = Partial<Research> & { primaryAdvisorId?: string; secondaryAdvisorIds?: string[] };
 type ProjectInput = Omit<Research, "id" | "updatedAt" | "history" | "comments"> & { adviseeId?: string; primaryAdvisorId?: string; secondaryAdvisorIds?: string[] };
-type DashboardProps = { initialItems: Research[]; role: Role; availableRoles: Role[]; systemRole: string; personName: string; directory: DirectoryPerson[] };
+type DashboardProps = { initialItems: Research[]; role: Role; availableRoles: Role[]; systemRole: string; personName: string; directory: UserDirectoryPerson[] };
 
-const navigation = [
-  { label: "ภาพรวม", icon: LayoutDashboard },
-  { label: "งานวิจัย", icon: FolderKanban },
-  { label: "ความเห็น", icon: MessageCircle },
-  { label: "ทีม", icon: Users },
-  { label: "จัดการผู้ใช้", icon: UserRoundCog, managerOnly: true },
-];
 const reviews: ReviewStatus[] = ["ยังไม่ส่งตรวจ", "ส่งตรวจ", "ขอแก้ไข", "อนุมัติ"];
+const dashboardViews = ["ภาพรวม", "งานวิจัย", "ความเห็น", "ทีม"] as const;
 const fieldClass = "h-11 rounded-xl border-[#e7e1eb] bg-white text-base focus-visible:border-[#9774b2] focus-visible:ring-[#9774b2]/20";
 const textareaClass = "min-h-24 rounded-xl border-[#e7e1eb] bg-white text-base focus-visible:border-[#9774b2] focus-visible:ring-[#9774b2]/20";
+const progressWidths = ["w-[0%]", "w-[5%]", "w-[10%]", "w-[15%]", "w-[20%]", "w-[25%]", "w-[30%]", "w-[35%]", "w-[40%]", "w-[45%]", "w-[50%]", "w-[55%]", "w-[60%]", "w-[65%]", "w-[70%]", "w-[75%]", "w-[80%]", "w-[85%]", "w-[90%]", "w-[95%]", "w-full"] as const;
 
 const dayDiff = (date: string) => differenceInCalendarDays(parseISO(date), new Date());
 const formatThaiDate = (date: string, withYear = false) => format(parseISO(date), withYear ? "d MMM yyyy" : "d MMM", { locale: th });
@@ -57,22 +45,37 @@ const reviewTone = (status: ReviewStatus) => {
 };
 
 export default function Dashboard({ initialItems, role, availableRoles, systemRole, personName, directory }: DashboardProps) {
+  const requestedView = useSearchParams().get("view");
+  const initialView = dashboardViews.find((view) => view === requestedView) ?? "ภาพรวม";
+  return (
+    <DashboardContent
+      key={initialView}
+      initialView={initialView}
+      initialItems={initialItems}
+      role={role}
+      availableRoles={availableRoles}
+      systemRole={systemRole}
+      personName={personName}
+      directory={directory}
+    />
+  );
+}
+
+function DashboardContent({ initialView, initialItems, role, availableRoles, systemRole, personName, directory }: DashboardProps & { initialView: string }) {
   const router = useRouter();
   const [items, setItems] = useState<Research[]>(initialItems);
-  const [people, setPeople] = useState<DirectoryPerson[]>(directory);
+  const people = directory;
   const [team, setTeam] = useState<TeamMember[] | null>(null);
   const person = personName;
-  const [active, setActive] = useState("ภาพรวม");
+  const [active, setActive] = useState<string>(initialView);
   const [query, setQuery] = useState("");
   const [stageFilter, setStageFilter] = useState("ทั้งหมด");
   const [selected, setSelected] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [showAllDeadlines, setShowAllDeadlines] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isManager = role === "PM" || role === "Superadmin" || systemRole === "PM" || systemRole === "SUPERADMIN";
   const selectedItem = items.find((item) => item.id === selected) ?? null;
-  const nav = navigation.filter((item) => !item.managerOnly || isManager);
   const visible = useMemo(() => items.filter((item) => isManager || (role === "Advisor" ? item.advisor.includes(person) : item.student === person)), [items, role, person, isManager]);
   const filtered = useMemo(() => visible.filter((item) => (stageFilter === "ทั้งหมด" || item.stage === Number(stageFilter)) && `${item.title} ${item.student} ${item.id} ${item.faculty} ${item.advisor.join(" ")}`.toLocaleLowerCase().includes(query.toLocaleLowerCase())), [visible, query, stageFilter]);
   const deadlines = visible.filter((item) => dayDiff(item.dueDate) <= 14).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
@@ -137,125 +140,68 @@ export default function Dashboard({ initialItems, role, availableRoles, systemRo
   };
 
   const changeActive = (value: string) => {
+    if (value === "จัดการผู้ใช้") {
+      router.push("/users");
+      return;
+    }
     setActive(value);
-    setMobileMenuOpen(false);
     if (value !== "งานวิจัย") setStageFilter("ทั้งหมด");
   };
 
-  const signOut = async () => {
-    const { authClient } = await import("@/lib/auth-client");
-    await authClient.signOut();
-    router.replace("/login");
-  };
-
   return (
-    <div className="min-h-[100svh] bg-[#f6f7fb] text-[#30283a]">
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[264px] flex-col border-r border-[#e9e5ed] bg-white px-4 py-5 lg:flex">
-        <a href="#top" className="mb-8 flex h-12 items-center rounded-xl px-2" aria-label="Research Tracker หน้าแรก">
-          <Image src="/images/branding/logo-horizontal.png.png" alt="Research Tracker" width={434} height={145} priority className="h-auto w-[198px] object-contain" />
-        </a>
-        <div className="mb-3 px-3 text-xs font-bold tracking-[.16em] text-[#9a92a2]">WORKSPACE</div>
-        <div className="mb-6 flex items-center gap-3 rounded-2xl border border-[#eeeaf2] bg-[#fbfafc] p-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#eee8f4] text-base font-bold text-[#694786]">ส</span>
-          <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">สถาบันวิจัยสุขภาพ</span><span className="mt-0.5 block truncate text-sm text-[#8a8292]">ภาควิชาสาธารณสุข</span></span>
-          <ChevronDown className="size-4 text-[#9a92a2]" />
-        </div>
-        <p className="mb-2 px-3 text-sm font-semibold text-[#938b9a]">เมนูหลัก</p>
-        <nav aria-label="เมนูหลัก" className="space-y-1">
-          {nav.map(({ label, icon: Icon }) => <NavButton key={label} label={label} icon={Icon} active={active === label} count={label === "ความเห็น" ? visible.reduce((count, item) => count + item.comments.length, 0) : undefined} onClick={() => changeActive(label)} />)}
-        </nav>
-        <Separator className="my-5 bg-[#eeeaf2]" />
-        <p className="mb-2 px-3 text-sm font-semibold text-[#938b9a]">เครื่องมือ</p>
-        <NavButton label="ปฏิทินกำหนดส่ง" icon={CalendarDays} active={false} onClick={() => changeActive("งานวิจัย")} />
-        <div className="mt-auto rounded-2xl border border-[#e6e0eb] bg-gradient-to-br from-[#f7f2fa] to-[#f1f7eb] p-4">
-          <div className="flex items-center gap-2 text-sm font-semibold text-[#554465]"><ShieldCheck className="size-4 text-[#76519a]" />เชื่อมต่อฐานข้อมูลแล้ว</div>
-          <p className="mt-2 text-sm leading-6 text-[#776f80]">ข้อมูลและสิทธิ์แสดงตามบทบาทของคุณ</p>
-        </div>
-        <button onClick={() => router.push("/profile")} className="mt-4 flex min-h-14 w-full items-center gap-3 rounded-2xl px-2 text-left transition hover:bg-[#f7f5f9]">
-          <Avatar className="size-10 rounded-xl"><AvatarFallback className="rounded-xl bg-[#eee8f4] font-semibold text-[#674382]">{initials(person)}</AvatarFallback></Avatar>
-          <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{person}</span><span className="block truncate text-sm text-[#837a8b]">{roleLabel(role)}</span></span>
-          <ChevronDown className="size-4 text-[#958c9c]" />
-        </button>
-      </aside>
+    <WorkspaceShell
+      activeItem={active}
+      personName={person}
+      role={role}
+      systemRole={systemRole}
+      availableRoles={availableRoles}
+      projectCount={visible.length}
+      commentCount={visible.reduce((count, item) => count + item.comments.length, 0)}
+      onNavigate={changeActive}
+    >
+      <PageHeading
+        eyebrow={todayLabel}
+        title={heading(active)}
+        description={description(active, isManager, role)}
+        action={isManager ? <Button onClick={() => setCreating(true)} className="h-11 rounded-lg px-4"><Plus className="size-4" />เพิ่มงานวิจัย</Button> : undefined}
+      />
 
-      <div className="sticky top-0 z-30 border-b border-[#e9e5ed] bg-white/95 px-4 backdrop-blur sm:px-6 lg:ml-[264px] lg:px-8">
-        <header className="mx-auto flex min-h-16 max-w-[1540px] items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <button className="grid size-10 shrink-0 place-items-center rounded-xl text-[#6f6579] hover:bg-[#f5f2f7] lg:hidden" onClick={() => setMobileMenuOpen((open) => !open)} aria-label="เปิดเมนู"><Users className="size-5" /></button>
-            <Image src="/images/branding/logo-horizontal.png.png" alt="Research Tracker" width={434} height={145} priority className="h-auto w-[150px] object-contain sm:w-[172px] lg:hidden" />
-            <div className="hidden min-w-0 items-center gap-2 text-sm text-[#8a8292] lg:flex"><span>งานวิจัย</span><span>/</span><span className="truncate font-semibold text-[#483d52]">{active}</span></div>
-            <span className="hidden rounded-full border border-[#e5e2e9] bg-[#faf9fb] px-2.5 py-1 text-xs font-semibold text-[#746b7e] sm:inline-flex">LIVE SESSION</span>
-          </div>
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            {availableRoles.length > 1 && availableRoles.includes(role) && <label className="flex items-center gap-2 text-sm text-[#807787]"><span className="hidden sm:inline">โหมด</span><select value={role} aria-label="เลือกโหมดทำงาน" onChange={async (event) => { const next = event.target.value as Role; const response = await fetch("/api/profile/mode", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: next === "Advisor" ? "ADVISOR" : "ADVISEE" }) }); const result = await response.json(); if (response.ok) router.refresh(); else toast.error(result.error ?? "เปลี่ยนโหมดไม่สำเร็จ"); }} className="h-10 rounded-xl border border-[#e7e1eb] bg-white px-2.5 text-sm font-semibold text-[#4d4258] outline-none focus-visible:ring-4 focus-visible:ring-[#85619c]/15">{availableRoles.map((value) => <option key={value}>{value}</option>)}</select></label>}
-            <Button variant="outline" size="icon" aria-label="การแจ้งเตือน" className="relative size-10 rounded-xl border-[#e8e4ec] text-[#716879]"><Bell className="size-4" /><span className="absolute right-2 top-2 size-1.5 rounded-full bg-[#7da245]" /></Button>
-            <Button variant="ghost" size="icon" aria-label="ออกจากระบบ" onClick={() => void signOut()} className="size-10 rounded-xl text-[#716879]"><LogOut className="size-4" /></Button>
-          </div>
-        </header>
-        {mobileMenuOpen && <nav aria-label="เมนูหลัก" className="mx-auto grid max-w-[1540px] grid-cols-2 gap-2 pb-4 sm:grid-cols-3 lg:hidden">{nav.map(({ label, icon: Icon }) => <NavButton key={label} label={label} icon={Icon} active={active === label} onClick={() => changeActive(label)} compact />)}</nav>}
-      </div>
+      {active !== "ทีม" && <>
+        <section aria-label="สรุปงานวิจัย" className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+          <MetricCard title="งานวิจัยทั้งหมด" value={visible.length} detail="รายการที่อยู่ในระบบ" icon={BookOpenCheck} tone="violet" />
+          <MetricCard title="กำลังดำเนินการ" value={visible.filter((item) => item.stage > 0 && item.stage < 7).length} detail="อยู่ระหว่างทำวิจัย" icon={Clock3} tone="blue" />
+          <MetricCard title="ใกล้ถึงกำหนดส่ง" value={deadlines.filter((item) => dayDiff(item.dueDate) >= 0).length} detail="ภายใน 14 วัน" icon={CalendarDays} tone="green" />
+          <MetricCard title="ต้องติดตาม" value={attention.length} detail="มีเรื่องรอการดูแล" icon={CircleAlert} tone="rose" />
+        </section>
 
-      <main className="px-4 pb-28 pt-5 sm:px-6 sm:pt-7 lg:ml-[264px] lg:px-8 lg:pb-10 lg:pt-8" id="top">
-        <div className="mx-auto max-w-[1540px]">
-          <section className="relative mb-6 overflow-hidden rounded-[2rem] border border-[#e8e3ed] bg-white px-5 py-6 shadow-[0_8px_30px_rgba(48,36,60,.035)] sm:px-8 sm:py-8 lg:px-10">
-            <div className="relative z-10 max-w-3xl">
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#f5f1f8] px-3 py-1.5 text-sm font-semibold text-[#6d4a8c]"><span className="size-2 rounded-full bg-[#81a949]" />{todayLabel}</div>
-              <h1 className="text-2xl font-semibold tracking-tight text-[#342740] sm:text-3xl lg:text-4xl">{heading(active)}</h1>
-              <p className="mt-2 max-w-2xl text-base leading-7 text-[#777080]">{description(active, isManager, role)}</p>
-              {isManager && <Button onClick={() => setCreating(true)} className="mt-5 h-11 rounded-xl px-4"><Plus className="size-4" />เพิ่มงานวิจัย</Button>}
-            </div>
-            <Image src="/images/branding/illustration-research.png.png" alt="" width={362} height={272} priority className="pointer-events-none absolute -right-7 -bottom-12 hidden h-72 w-80 object-contain opacity-80 lg:block xl:right-8 xl:bottom-[-4.5rem] xl:h-[340px] xl:w-[400px]" />
-          </section>
+        {isManager && <Card className="mb-6 rounded-2xl border-[#e9e7ed] shadow-none">
+          <CardHeader className="flex flex-row items-center justify-between gap-4 px-5 pb-3 pt-5 sm:px-6 sm:pt-6">
+            <div><CardTitle className="text-lg font-semibold text-[#3a2e45]">ความก้าวหน้าตามขั้นตอน</CardTitle><p className="mt-1 text-sm text-[#817888]">ภาพรวมจำนวนโครงการในแต่ละช่วงการวิจัย</p></div>
+            <Button variant="ghost" onClick={() => changeActive("งานวิจัย")} className="hidden min-h-10 rounded-lg text-[#694786] sm:inline-flex">ดูรายการ <ArrowRight className="size-4" /></Button>
+          </CardHeader>
+          <CardContent className="grid gap-2 px-5 pb-5 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
+            {stages.map((stage, index) => <button key={stage} onClick={() => { setActive("งานวิจัย"); setStageFilter(String(index)); }} className="flex min-h-14 items-center gap-3 rounded-lg border border-[#eeecf1] bg-white px-3 text-left transition-colors hover:border-[#d9cde3] hover:bg-[#fbf9fc]">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#f3eff7] text-sm font-semibold text-[#704b8d]">{String(index).padStart(2, "0")}</span><span className="min-w-0 flex-1 truncate text-sm font-medium text-[#5c5266]">{stage}</span><span className="text-sm font-semibold tabular-nums text-[#483d52]">{stageCounts[index]}</span>
+            </button>)}
+          </CardContent>
+        </Card>}
+      </>}
 
-          {active !== "จัดการผู้ใช้" && active !== "ทีม" && <>
-            <section aria-label="สรุปงานวิจัย" className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-              <MetricCard title="งานวิจัยทั้งหมด" value={visible.length} detail="รายการที่อยู่ในระบบ" icon={BookOpenCheck} tone="violet" />
-              <MetricCard title="กำลังดำเนินการ" value={visible.filter((item) => item.stage > 0 && item.stage < 7).length} detail="อยู่ระหว่างทำวิจัย" icon={Clock3} tone="blue" />
-              <MetricCard title="ใกล้ถึงกำหนดส่ง" value={deadlines.filter((item) => dayDiff(item.dueDate) >= 0).length} detail="ภายใน 14 วัน" icon={CalendarDays} tone="green" />
-              <MetricCard title="ต้องติดตาม" value={attention.length} detail="มีเรื่องรอการดูแล" icon={CircleAlert} tone="rose" />
-            </section>
-
-            {isManager && <Card className="mb-6 rounded-[1.75rem] border-[#e9e4ed] shadow-sm shadow-[#40304c]/[.025]">
-              <CardHeader className="flex flex-row items-center justify-between gap-4 px-5 pb-3 pt-5 sm:px-6 sm:pt-6">
-                <div><CardTitle className="text-lg font-semibold text-[#3a2e45]">ความก้าวหน้าตามขั้นตอน</CardTitle><p className="mt-1 text-sm text-[#817888]">ภาพรวมจำนวนโครงการในแต่ละช่วงการวิจัย</p></div>
-                <Button variant="ghost" onClick={() => changeActive("งานวิจัย")} className="hidden min-h-10 rounded-xl text-[#694786] sm:inline-flex">ดูรายการ <ArrowRight className="size-4" /></Button>
-              </CardHeader>
-              <CardContent className="grid gap-2 px-5 pb-5 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
-                {stages.map((stage, index) => <button key={stage} onClick={() => { setActive("งานวิจัย"); setStageFilter(String(index)); }} className="flex min-h-14 items-center gap-3 rounded-xl border border-[#f0edf3] bg-[#fdfcfe] px-3 text-left transition hover:border-[#d9cde3] hover:bg-[#faf7fc]">
-                  <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#f1ebf6] text-sm font-bold text-[#704b8d]">{String(index).padStart(2, "0")}</span><span className="min-w-0 flex-1 truncate text-sm font-medium text-[#5c5266]">{stage}</span><span className="text-sm font-semibold text-[#483d52]">{stageCounts[index]}</span>
-                </button>)}
-              </CardContent>
-            </Card>}
-          </>}
-
-          {active === "ทีม" ? <TeamDirectory people={team ?? []} loading={team === null} /> : active === "จัดการผู้ใช้" && isManager ?
-            <UserDirectory people={people} onChange={setPeople} canAssignSystemRole={role === "Superadmin" || systemRole === "SUPERADMIN"} /> :
-            <div className="grid items-start gap-5 2xl:grid-cols-[minmax(0,1fr)_340px]">
-              <ProjectList items={filtered} active={active} query={query} stageFilter={stageFilter} onQueryChange={setQuery} onStageChange={setStageFilter} onSelect={setSelected} />
-              <aside className="grid gap-5 md:grid-cols-2 2xl:grid-cols-1">
-                <DeadlinePanel items={showAllDeadlines ? deadlines : deadlines.slice(0, 4)} total={deadlines.length} expanded={showAllDeadlines} onToggle={() => setShowAllDeadlines((value) => !value)} onSelect={setSelected} onViewAll={() => changeActive("งานวิจัย")} />
-                <AttentionPanel items={attention.slice(0, 4)} total={attention.length} onSelect={setSelected} onViewAll={() => { changeActive("งานวิจัย"); setQuery(""); }} />
-                {isManager && <Card className="rounded-[1.5rem] border-[#e8e3ed] bg-gradient-to-br from-[#f8f4fb] to-[#f2f7ec] shadow-none"><CardContent className="flex items-start gap-3 p-5"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-[#704b8d] shadow-sm"><Users className="size-5" /></span><div><h2 className="text-base font-semibold text-[#42364d]">บัญชีเข้าใช้งาน</h2><p className="mt-1 text-sm leading-6 text-[#756d7e]">ลงทะเบียน CID และกำหนดบทบาทก่อนเริ่มใช้งาน</p><Button variant="ghost" className="mt-2 h-10 px-0 text-[#694786]" onClick={() => changeActive("จัดการผู้ใช้")}>จัดการผู้ใช้ <ArrowRight className="size-4" /></Button></div></CardContent></Card>}
-              </aside>
-            </div>}
-          <footer className="mt-8 hidden items-center justify-between border-t border-[#e8e4ec] pt-5 text-sm text-[#8a8292] sm:flex"><span>Research Tracker · ระบบติดตามความก้าวหน้างานวิจัย</span><span>พื้นที่ทำงานส่วนบุคคล</span></footer>
-        </div>
-      </main>
-
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-[#e9e5ed] bg-white/95 px-2 pb-[max(env(safe-area-inset-bottom),.5rem)] pt-2 backdrop-blur lg:hidden" aria-label="เมนูด้านล่าง">
-        {nav.filter((item) => item.label !== "จัดการผู้ใช้").slice(0, 4).map(({ label, icon: Icon }) => <button key={label} onClick={() => changeActive(label)} className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl text-xs font-medium transition ${active === label ? "text-[#65418a]" : "text-[#847b8c]"}`}><Icon className="size-5" /><span>{label}</span></button>)}
-      </nav>
+      {active === "ทีม" ? <TeamDirectory people={team ?? []} loading={team === null} /> :
+        <div className="grid items-start gap-5 2xl:grid-cols-[minmax(0,1fr)_340px]">
+          <ProjectList items={filtered} active={active} query={query} stageFilter={stageFilter} onQueryChange={setQuery} onStageChange={setStageFilter} onSelect={setSelected} />
+          <aside className="grid gap-5 md:grid-cols-2 2xl:grid-cols-1">
+            <DeadlinePanel items={showAllDeadlines ? deadlines : deadlines.slice(0, 4)} total={deadlines.length} expanded={showAllDeadlines} onToggle={() => setShowAllDeadlines((value) => !value)} onSelect={setSelected} onViewAll={() => changeActive("งานวิจัย")} />
+            <AttentionPanel items={attention.slice(0, 4)} total={attention.length} onSelect={setSelected} onViewAll={() => { changeActive("งานวิจัย"); setQuery(""); }} />
+            {isManager && <Card className="rounded-2xl border-[#e9e7ed] bg-[#f5f2f8] shadow-none"><CardContent className="flex items-start gap-3 p-5"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-[#704b8d]"><Users className="size-5" /></span><div><h2 className="text-base font-semibold text-[#42364d]">บัญชีเข้าใช้งาน</h2><p className="mt-1 text-sm leading-6 text-[#756d7e]">ลงทะเบียน CID และกำหนดบทบาทก่อนเริ่มใช้งาน</p><Button variant="ghost" className="mt-2 h-10 px-0 text-[#694786]" onClick={() => changeActive("จัดการผู้ใช้")}>จัดการผู้ใช้ <ArrowRight className="size-4" /></Button></div></CardContent></Card>}
+          </aside>
+        </div>}
+      <footer className="mt-8 hidden items-center justify-between border-t border-[#e8e6ec] pt-5 text-sm text-[#8a8292] sm:flex"><span>Research Tracker · ระบบติดตามความก้าวหน้างานวิจัย</span><span>พื้นที่ทำงานส่วนบุคคล</span></footer>
 
       <ProjectDialog key={selectedItem?.id ?? "closed"} item={selectedItem} role={role} systemRole={systemRole} person={person} people={people} onClose={() => setSelected(null)} onSave={updateProject} />
       <CreateProjectDialog open={creating} people={people} onOpenChange={setCreating} onCreate={createProject} />
-    </div>
+    </WorkspaceShell>
   );
-}
-
-function NavButton({ label, icon: Icon, active, onClick, count, compact = false }: { label: string; icon: typeof LayoutDashboard; active: boolean; onClick: () => void; count?: number; compact?: boolean }) {
-  return <button onClick={onClick} className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold transition ${active ? "bg-[#f2edf7] text-[#65418a]" : "text-[#746c7c] hover:bg-[#f7f5f9] hover:text-[#4c3e59]"} ${compact ? "border border-[#eeeaf2] bg-white" : ""}`}>
-    <Icon className="size-[18px] shrink-0" /><span className="min-w-0 flex-1 truncate">{label}</span>{typeof count === "number" && count > 0 && <span className="rounded-full bg-white px-2 py-0.5 text-xs text-[#6c4b87]">{count}</span>}
-  </button>;
 }
 
 function MetricCard({ title, value, detail, icon: Icon, tone }: { title: string; value: number; detail: string; icon: typeof BookOpenCheck; tone: "violet" | "blue" | "green" | "rose" }) {
@@ -307,7 +253,7 @@ function ProjectCard({ item, onSelect }: { item: Research; onSelect: () => void 
 function StageBadge({ stage }: { stage: number }) { return <Badge variant="outline" className="h-7 max-w-full rounded-full border-[#e8e3ed] bg-[#faf8fc] px-2.5 text-xs font-medium text-[#655a70]"><span className="mr-1.5 size-1.5 shrink-0 rounded-full bg-[#80609b]" />{stages[stage] ?? "ไม่ระบุขั้นตอน"}</Badge>; }
 function ReviewBadge({ status }: { status: ReviewStatus }) { return <Badge variant="outline" className={`h-7 shrink-0 rounded-full px-2.5 text-xs font-semibold ${reviewTone(status)}`}>{status}</Badge>; }
 function DueDate({ date }: { date: string }) { const diff = dayDiff(date); return <span className={`inline-flex items-center gap-1.5 whitespace-nowrap text-sm ${diff < 0 ? "font-semibold text-[#a74d42]" : diff <= 7 ? "font-semibold text-[#996b2d]" : "text-[#746c7d]"}`}><CalendarDays className="size-3.5" />{formatThaiDate(date)}</span>; }
-function Progress({ value }: { value: number }) { return <span className="flex min-w-24 flex-1 items-center gap-2"><span className="h-2 min-w-12 flex-1 overflow-hidden rounded-full bg-[#efedf2]"><span className="block h-full rounded-full bg-gradient-to-r from-[#74519a] to-[#9c7cb9]" style={{ width: `${value}%` }} /></span><span className="w-9 text-right text-sm font-semibold tabular-nums text-[#62586c]">{value}%</span></span>; }
+function Progress({ value }: { value: number }) { const width = progressWidths[Math.round(Math.min(100, Math.max(0, value)) / 5)] ?? "w-[0%]"; return <span className="flex min-w-24 flex-1 items-center gap-2"><span className="h-2 min-w-12 flex-1 overflow-hidden rounded-full bg-[#efedf2]"><span className={`block h-full rounded-full bg-[#765196] transition-[width] duration-300 ${width}`} /></span><span className="w-9 text-right text-sm font-semibold tabular-nums text-[#62586c]">{value}%</span></span>; }
 
 function DeadlinePanel({ items, total, expanded, onToggle, onSelect, onViewAll }: { items: Research[]; total: number; expanded: boolean; onToggle: () => void; onSelect: (id: string) => void; onViewAll: () => void }) {
   return <Card className="rounded-[1.5rem] border-[#e9e4ed] shadow-sm shadow-[#40304c]/[.025]">
@@ -333,7 +279,7 @@ function AttentionPanel({ items, total, onSelect, onViewAll }: { items: Research
   </Card>;
 }
 
-function CreateProjectDialog({ open, people, onOpenChange, onCreate }: { open: boolean; people: DirectoryPerson[]; onOpenChange: (open: boolean) => void; onCreate: (project: ProjectInput) => void }) {
+function CreateProjectDialog({ open, people, onOpenChange, onCreate }: { open: boolean; people: UserDirectoryPerson[]; onOpenChange: (open: boolean) => void; onCreate: (project: ProjectInput) => void }) {
   const [title, setTitle] = useState("");
   const [student, setStudent] = useState("");
   const [faculty, setFaculty] = useState("");
@@ -370,7 +316,7 @@ function CreateProjectDialog({ open, people, onOpenChange, onCreate }: { open: b
   </Dialog>;
 }
 
-function ProjectDialog({ item, role, systemRole, person, people, onClose, onSave }: { item: Research | null; role: Role; systemRole: string; person: string; people: DirectoryPerson[]; onClose: () => void; onSave: (id: string, updates: ResearchChanges, description: string) => void }) {
+function ProjectDialog({ item, role, systemRole, person, people, onClose, onSave }: { item: Research | null; role: Role; systemRole: string; person: string; people: UserDirectoryPerson[]; onClose: () => void; onSave: (id: string, updates: ResearchChanges, description: string) => void }) {
   const [stage, setStage] = useState(item?.stage ?? 0);
   const [progress, setProgress] = useState(item?.progress ?? 0);
   const [issue, setIssue] = useState(item?.issue ?? "");
@@ -447,6 +393,5 @@ function ProjectDialog({ item, role, systemRole, person, people, onClose, onSave
 }
 
 function Field({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) { return <label className={`block min-w-0 space-y-2 text-sm font-semibold text-[#51465b] ${className}`}>{label}{children}</label>; }
-function roleLabel(role: Role) { return role === "Superadmin" ? "Superadmin" : role === "PM" ? "ผู้จัดการโครงการ" : role === "Advisor" ? "ที่ปรึกษางานวิจัย" : "นักวิจัย"; }
 function heading(active: string) { return active === "ภาพรวม" ? "ภาพรวมงานวิจัย" : active === "งานวิจัย" ? "งานวิจัยทั้งหมด" : active === "ความเห็น" ? "ความเห็นจากที่ปรึกษา" : active === "ทีม" ? "รายชื่อทีมวิจัย" : "จัดการผู้ใช้และสิทธิ์"; }
 function description(active: string, isManager: boolean, role: Role) { return active === "ทีม" ? "ดูชื่อ บทบาท และข้อมูลโปรไฟล์ของสมาชิกในทีม" : active === "จัดการผู้ใช้" ? "จัดการ CID บทบาท และข้อมูลที่จำเป็นสำหรับการเข้าใช้งาน" : isManager ? "ติดตามความก้าวหน้า กำหนดส่ง และประเด็นที่ต้องดูแลในพื้นที่เดียว" : role === "Advisor" ? "งานวิจัยที่มอบหมายและความเห็นที่รอการติดตาม" : "ความคืบหน้าและรายการที่ต้องทำของคุณ"; }
