@@ -299,7 +299,7 @@ function UserEditorDialog({
 
   return (
     <Dialog open onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={false} className="grid max-h-[92svh] w-[calc(100%-1rem)] max-w-3xl grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden rounded-[1.75rem] border border-[#e9e1ee] bg-white p-0 text-[#40364a] shadow-[0_28px_100px_rgba(47,29,62,.25)] sm:w-[calc(100%-3rem)]">
+      <DialogContent showCloseButton={false} className="grid max-h-[92svh] w-[calc(100%-1rem)] max-w-none grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden rounded-[1.75rem] border border-[#e9e1ee] bg-white p-0 text-[#40364a] shadow-[0_28px_100px_rgba(47,29,62,.25)] sm:w-[calc(100%-3rem)] sm:max-w-4xl lg:max-w-5xl">
         <div className="relative shrink-0 overflow-hidden border-b border-[#eee8f2] bg-[linear-gradient(125deg,#fbf8fd_0%,#ffffff_55%,#f5f8f0_100%)] px-5 py-5 pr-14 sm:px-7 sm:py-6 sm:pr-16">
           <div className="pointer-events-none absolute -right-10 -top-16 size-44 rounded-full bg-[#e7d9f1]/60 blur-3xl" />
           <DialogClose aria-label="ปิดหน้าต่าง" className="absolute right-4 top-4 grid size-9 place-items-center rounded-xl border border-[#e8e1ec] bg-white/90 text-[#817888] shadow-sm transition hover:bg-[#f6f1f9] hover:text-[#5d3d79] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#85619c]/15">
@@ -324,10 +324,10 @@ function UserEditorDialog({
             <section className="space-y-3">
               <SectionHeading number="01" title="ข้อมูลประจำตัว" detail="ชื่อและข้อมูลที่ใช้ระบุตัวตนในระบบ" />
               <div className="grid gap-3 sm:grid-cols-2">
-                <FormField label="ชื่อและนามสกุล" error={form.formState.errors.fullName?.message} className="sm:col-span-2">
+                <FormField label="ชื่อและนามสกุล" error={form.formState.errors.fullName?.message} className={mode === "create" ? undefined : "sm:col-span-2"}>
                   <Input autoComplete="name" placeholder="เช่น กานต์ชนก ใจดี" {...form.register("fullName")} className={inputClass} />
                 </FormField>
-                {mode === "create" && <FormField label="เลข CID 13 หลัก" hint="ระบบจะเก็บเป็นรหัสตรวจสอบ ไม่เก็บเลขดิบ" error={form.formState.errors.cid?.message} className="sm:col-span-2">
+                {mode === "create" && <FormField label="เลข CID 13 หลัก" hint="ระบบจะเก็บเป็นรหัสตรวจสอบ ไม่เก็บเลขดิบ" error={form.formState.errors.cid?.message}>
                   <Input inputMode="numeric" autoComplete="off" maxLength={13} placeholder="กรอกเลขบัตรประชาชน 13 หลัก" {...form.register("cid", { onChange: (event) => { event.target.value = event.target.value.replace(/\D/g, "").slice(0, 13); } })} className={inputClass} />
                 </FormField>}
                 <FormField label="Email สำหรับเข้าสู่ระบบสำรอง" hint={mode === "create" ? "ไม่ใส่ตอนนี้ก็ได้ ตั้งค่าได้ภายหลัง" : "เปลี่ยน Email แล้วระบบจะยกเลิกการยืนยัน Email เดิม"} error={form.formState.errors.email?.message} className="sm:col-span-2">
