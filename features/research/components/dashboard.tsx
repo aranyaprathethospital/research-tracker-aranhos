@@ -6,13 +6,13 @@ import { useRouter } from "next/navigation";
 import { differenceInCalendarDays, format, parseISO } from "date-fns";
 import { th } from "date-fns/locale";
 import {
-  ArrowDownRight, ArrowRight, Bell, BookOpenCheck, CalendarDays, Check, CheckCircle2,
-  ChevronDown, CircleAlert, Clock3, FileText, FolderKanban, LayoutDashboard, LogOut,
-  MessageCircle, Plus, Search, ShieldCheck, Users, UserRoundCog, X,
+  ArrowDownRight, ArrowRight, Bell, BookOpenCheck, CalendarDays, Check,
+  ChevronDown, CircleAlert, Clock3, FolderKanban, LayoutDashboard, LogOut,
+  MessageCircle, Plus, Search, ShieldCheck, Users, UserRoundCog,
 } from "lucide-react";
 import { toast } from "sonner";
-import { initialResearch, stages, type Research, type ReviewStatus, type Role } from "@/lib/demo-data";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { stages, type Research, type ReviewStatus, type Role } from "@/lib/research-types";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,8 +22,8 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import UserDirectory from "./user-directory";
-import TeamDirectory, { type TeamMember } from "./team-directory";
+import UserDirectory from "@/features/users/components/user-directory";
+import TeamDirectory, { type TeamMember } from "@/features/team/components/team-directory";
 
 type DirectoryPerson = {
   id: string; name: string; systemRole: string; capabilities: string[]; email?: string;
@@ -33,13 +33,13 @@ type DirectoryPerson = {
 };
 type ResearchChanges = Partial<Research> & { primaryAdvisorId?: string; secondaryAdvisorIds?: string[] };
 type ProjectInput = Omit<Research, "id" | "updatedAt" | "history" | "comments"> & { adviseeId?: string; primaryAdvisorId?: string; secondaryAdvisorIds?: string[] };
-type DashboardProps = { demo?: boolean; initialItems?: Research[]; role?: Role; availableRoles?: Role[]; systemRole?: string; personName?: string; directory?: DirectoryPerson[] };
+type DashboardProps = { initialItems: Research[]; role: Role; availableRoles: Role[]; systemRole: string; personName: string; directory: DirectoryPerson[] };
 
 const navigation = [
   { label: "ภาพรวม", icon: LayoutDashboard },
   { label: "งานวิจัย", icon: FolderKanban },
   { label: "ความเห็น", icon: MessageCircle },
-  { label: "ทีม", icon: Users, liveOnly: true },
+  { label: "ทีม", icon: Users },
   { label: "จัดการผู้ใช้", icon: UserRoundCog, managerOnly: true },
 ];
 const reviews: ReviewStatus[] = ["ยังไม่ส่งตรวจ", "ส่งตรวจ", "ขอแก้ไข", "อนุมัติ"];
@@ -56,14 +56,12 @@ const reviewTone = (status: ReviewStatus) => {
   return "border-[#e8e4ec] bg-[#f7f6f8] text-[#71697b]";
 };
 
-export default function Dashboard({ demo = true, initialItems = initialResearch, role: initialRole = "PM", availableRoles = [], systemRole = "USER", personName = "ดร. อรทัย วัฒนกุล", directory = [] }: DashboardProps) {
+export default function Dashboard({ initialItems, role, availableRoles, systemRole, personName, directory }: DashboardProps) {
   const router = useRouter();
   const [items, setItems] = useState<Research[]>(initialItems);
   const [people, setPeople] = useState<DirectoryPerson[]>(directory);
   const [team, setTeam] = useState<TeamMember[] | null>(null);
-  const [ready, setReady] = useState(!demo);
-  const [role, setRole] = useState<Role>(initialRole);
-  const [person, setPerson] = useState(personName);
+  const person = personName;
   const [active, setActive] = useState("ภาพรวม");
   const [query, setQuery] = useState("");
   const [stageFilter, setStageFilter] = useState("ทั้งหมด");
@@ -74,7 +72,7 @@ export default function Dashboard({ demo = true, initialItems = initialResearch,
 
   const isManager = role === "PM" || role === "Superadmin" || systemRole === "PM" || systemRole === "SUPERADMIN";
   const selectedItem = items.find((item) => item.id === selected) ?? null;
-  const nav = navigation.filter((item) => (!item.liveOnly || !demo) && (!item.managerOnly || isManager));
+  const nav = navigation.filter((item) => !item.managerOnly || isManager);
   const visible = useMemo(() => items.filter((item) => isManager || (role === "Advisor" ? item.advisor.includes(person) : item.student === person)), [items, role, person, isManager]);
   const filtered = useMemo(() => visible.filter((item) => (stageFilter === "ทั้งหมด" || item.stage === Number(stageFilter)) && `${item.title} ${item.student} ${item.id} ${item.faculty} ${item.advisor.join(" ")}`.toLocaleLowerCase().includes(query.toLocaleLowerCase())), [visible, query, stageFilter]);
   const deadlines = visible.filter((item) => dayDiff(item.dueDate) <= 14).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
@@ -83,24 +81,7 @@ export default function Dashboard({ demo = true, initialItems = initialResearch,
   const todayLabel = format(new Date(), "EEEE d MMMM yyyy", { locale: th });
 
   useEffect(() => {
-    if (!demo) return;
-    const timer = window.setTimeout(() => {
-      const saved = localStorage.getItem("research-tracker-demo");
-      if (saved) {
-        try { setItems(JSON.parse(saved) as Research[]); }
-        catch { localStorage.removeItem("research-tracker-demo"); }
-      }
-      setReady(true);
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [demo]);
-
-  useEffect(() => {
-    if (demo && ready) localStorage.setItem("research-tracker-demo", JSON.stringify(items));
-  }, [items, ready, demo]);
-
-  useEffect(() => {
-    if (demo || active !== "ทีม" || team !== null) return;
+    if (active !== "ทีม" || team !== null) return;
     let cancelled = false;
     void fetch("/api/team", { cache: "no-store" })
       .then(async (response) => {
@@ -115,50 +96,44 @@ export default function Dashboard({ demo = true, initialItems = initialResearch,
         }
       });
     return () => { cancelled = true; };
-  }, [demo, active, team]);
+  }, [active, team]);
 
-  const updateProject = (id: string, updates: ResearchChanges, description: string, actor = isManager ? (role === "Superadmin" ? "Superadmin" : "ผู้จัดการโครงการ") : person) => {
+  const updateProject = (id: string, updates: ResearchChanges, description: string) => {
     const date = new Date().toISOString();
-    if (!demo) {
-      const { comments, advisor, primaryAdvisor, secondaryAdvisors, primaryAdvisorId, secondaryAdvisorIds, ...fields } = updates;
-      const comment = comments?.[0]?.text;
-      void fetch("/api/projects", {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, ...fields, ...(primaryAdvisorId ? { primaryAdvisorId } : {}), ...(secondaryAdvisorIds ? { secondaryAdvisorIds } : {}), ...(comment ? { comment } : {}) }),
-      }).then(async (response) => {
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error ?? "บันทึกไม่สำเร็จ");
-        if (result.project) setItems((current) => current.map((item) => item.id === id ? result.project as Research : item));
-        else setItems((current) => current.map((item) => item.id === id ? { ...item, ...fields, ...(comment ? { comments: [{ text: comment, date, by: person }, ...item.comments] } : {}), updatedAt: date, history: [{ text: description, date, by: person }, ...item.history] } : item));
-        toast.success("บันทึกการเปลี่ยนแปลงแล้ว");
-      }).catch((error: unknown) => toast.error(error instanceof Error ? error.message : "บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง"));
-      return;
-    }
-    setItems((current) => current.map((item) => item.id === id ? { ...item, ...updates, updatedAt: date, history: [{ text: description, date, by: actor }, ...item.history] } : item));
-    toast.success("บันทึกการเปลี่ยนแปลงแล้ว");
+    const fields = { ...updates };
+    const comment = fields.comments?.[0]?.text;
+    delete fields.comments;
+    delete fields.advisor;
+    delete fields.primaryAdvisor;
+    delete fields.secondaryAdvisors;
+    const primaryAdvisorId = fields.primaryAdvisorId;
+    const secondaryAdvisorIds = fields.secondaryAdvisorIds;
+    delete fields.primaryAdvisorId;
+    delete fields.secondaryAdvisorIds;
+    void fetch("/api/projects", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, ...fields, ...(primaryAdvisorId ? { primaryAdvisorId } : {}), ...(secondaryAdvisorIds ? { secondaryAdvisorIds } : {}), ...(comment ? { comment } : {}) }),
+    }).then(async (response) => {
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "บันทึกไม่สำเร็จ");
+      if (result.project) setItems((current) => current.map((item) => item.id === id ? result.project as Research : item));
+      else setItems((current) => current.map((item) => item.id === id ? { ...item, ...fields, ...(comment ? { comments: [{ text: comment, date, by: person }, ...item.comments] } : {}), updatedAt: date, history: [{ text: description, date, by: person }, ...item.history] } : item));
+      toast.success("บันทึกการเปลี่ยนแปลงแล้ว");
+    }).catch((error: unknown) => toast.error(error instanceof Error ? error.message : "บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง"));
   };
 
   const createProject = (project: ProjectInput) => {
-    if (!demo) {
-      void fetch("/api/projects", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: project.title, adviseeId: project.adviseeId, primaryAdvisorId: project.primaryAdvisorId, secondaryAdvisorIds: project.secondaryAdvisorIds, faculty: project.faculty, dueDate: project.dueDate }),
-      }).then(async (response) => {
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error ?? "สร้างรายการไม่สำเร็จ");
-        setItems((current) => [result.project as Research, ...current]);
-        setCreating(false);
-        setActive("งานวิจัย");
-        toast.success("เพิ่มงานวิจัยแล้ว");
-      }).catch((error: unknown) => toast.error(error instanceof Error ? error.message : "สร้างรายการไม่สำเร็จ ตรวจสอบข้อมูลและสิทธิ์ PM"));
-      return;
-    }
-    const createdAt = new Date().toISOString();
-    const next: Research = { ...project, id: `R-${String(Date.now()).slice(-5)}`, updatedAt: createdAt, history: [{ text: "สร้างรายการงานวิจัย", date: createdAt, by: "ผู้จัดการโครงการ" }], comments: [] };
-    setItems((current) => [next, ...current]);
-    setCreating(false);
-    setActive("งานวิจัย");
-    toast.success("เพิ่มงานวิจัยแล้ว");
+    void fetch("/api/projects", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: project.title, adviseeId: project.adviseeId, primaryAdvisorId: project.primaryAdvisorId, secondaryAdvisorIds: project.secondaryAdvisorIds, faculty: project.faculty, dueDate: project.dueDate }),
+    }).then(async (response) => {
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "สร้างรายการไม่สำเร็จ");
+      setItems((current) => [result.project as Research, ...current]);
+      setCreating(false);
+      setActive("งานวิจัย");
+      toast.success("เพิ่มงานวิจัยแล้ว");
+    }).catch((error: unknown) => toast.error(error instanceof Error ? error.message : "สร้างรายการไม่สำเร็จ ตรวจสอบข้อมูลและสิทธิ์ PM"));
   };
 
   const changeActive = (value: string) => {
@@ -172,8 +147,6 @@ export default function Dashboard({ demo = true, initialItems = initialResearch,
     await authClient.signOut();
     router.replace("/login");
   };
-
-  if (!ready) return <main className="grid min-h-[100svh] place-items-center bg-[#f6f7fb] px-5 text-base text-[#71697b]">กำลังเตรียมพื้นที่ทำงาน…</main>;
 
   return (
     <div className="min-h-[100svh] bg-[#f6f7fb] text-[#30283a]">
@@ -195,11 +168,10 @@ export default function Dashboard({ demo = true, initialItems = initialResearch,
         <p className="mb-2 px-3 text-sm font-semibold text-[#938b9a]">เครื่องมือ</p>
         <NavButton label="ปฏิทินกำหนดส่ง" icon={CalendarDays} active={false} onClick={() => changeActive("งานวิจัย")} />
         <div className="mt-auto rounded-2xl border border-[#e6e0eb] bg-gradient-to-br from-[#f7f2fa] to-[#f1f7eb] p-4">
-          <div className="flex items-center gap-2 text-sm font-semibold text-[#554465]"><ShieldCheck className="size-4 text-[#76519a]" />{demo ? "โหมดตัวอย่าง" : "เชื่อมต่อฐานข้อมูล"}</div>
-          <p className="mt-2 text-sm leading-6 text-[#776f80]">{demo ? "ข้อมูลตัวอย่างบันทึกไว้ในเบราว์เซอร์นี้" : "ข้อมูลและสิทธิ์แสดงตามบทบาทของคุณ"}</p>
-          {demo && <a href="/README.md" className="mt-2 inline-flex min-h-10 items-center text-sm font-semibold text-[#674382]">วิธีตั้งค่า ProviderID <ArrowRight className="ml-1 size-4" /></a>}
+          <div className="flex items-center gap-2 text-sm font-semibold text-[#554465]"><ShieldCheck className="size-4 text-[#76519a]" />เชื่อมต่อฐานข้อมูลแล้ว</div>
+          <p className="mt-2 text-sm leading-6 text-[#776f80]">ข้อมูลและสิทธิ์แสดงตามบทบาทของคุณ</p>
         </div>
-        <button onClick={() => { if (!demo) router.push("/profile"); }} className="mt-4 flex min-h-14 w-full items-center gap-3 rounded-2xl px-2 text-left transition hover:bg-[#f7f5f9]">
+        <button onClick={() => router.push("/profile")} className="mt-4 flex min-h-14 w-full items-center gap-3 rounded-2xl px-2 text-left transition hover:bg-[#f7f5f9]">
           <Avatar className="size-10 rounded-xl"><AvatarFallback className="rounded-xl bg-[#eee8f4] font-semibold text-[#674382]">{initials(person)}</AvatarFallback></Avatar>
           <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{person}</span><span className="block truncate text-sm text-[#837a8b]">{roleLabel(role)}</span></span>
           <ChevronDown className="size-4 text-[#958c9c]" />
@@ -212,13 +184,12 @@ export default function Dashboard({ demo = true, initialItems = initialResearch,
             <button className="grid size-10 shrink-0 place-items-center rounded-xl text-[#6f6579] hover:bg-[#f5f2f7] lg:hidden" onClick={() => setMobileMenuOpen((open) => !open)} aria-label="เปิดเมนู"><Users className="size-5" /></button>
             <Image src="/images/branding/logo-horizontal.png.png" alt="Research Tracker" width={434} height={145} priority className="h-auto w-[150px] object-contain sm:w-[172px] lg:hidden" />
             <div className="hidden min-w-0 items-center gap-2 text-sm text-[#8a8292] lg:flex"><span>งานวิจัย</span><span>/</span><span className="truncate font-semibold text-[#483d52]">{active}</span></div>
-            <span className="hidden rounded-full border border-[#e5e2e9] bg-[#faf9fb] px-2.5 py-1 text-xs font-semibold text-[#746b7e] sm:inline-flex">{demo ? "DEMO MODE" : "LIVE SESSION"}</span>
+            <span className="hidden rounded-full border border-[#e5e2e9] bg-[#faf9fb] px-2.5 py-1 text-xs font-semibold text-[#746b7e] sm:inline-flex">LIVE SESSION</span>
           </div>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            {demo && <label className="flex items-center gap-2 text-sm text-[#807787]"><span className="hidden sm:inline">มุมมอง</span><select value={role} aria-label="เลือกบทบาท" onChange={(event) => { const next = event.target.value as Role; setRole(next); setPerson(next === "Advisor" ? "ดร. อรทัย วัฒนกุล" : "กมลชนก ใจดี"); }} className="h-10 rounded-xl border border-[#e7e1eb] bg-white px-2.5 text-sm font-semibold text-[#4d4258] outline-none focus-visible:ring-4 focus-visible:ring-[#85619c]/15">{["PM", "Advisor", "Advisee"].map((value) => <option key={value}>{value}</option>)}</select></label>}
-            {!demo && availableRoles.length > 1 && availableRoles.includes(role) && <label className="flex items-center gap-2 text-sm text-[#807787]"><span className="hidden sm:inline">โหมด</span><select value={role} aria-label="เลือกโหมดทำงาน" onChange={async (event) => { const next = event.target.value as Role; const response = await fetch("/api/profile/mode", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: next === "Advisor" ? "ADVISOR" : "ADVISEE" }) }); const result = await response.json(); if (response.ok) router.refresh(); else toast.error(result.error ?? "เปลี่ยนโหมดไม่สำเร็จ"); }} className="h-10 rounded-xl border border-[#e7e1eb] bg-white px-2.5 text-sm font-semibold text-[#4d4258] outline-none focus-visible:ring-4 focus-visible:ring-[#85619c]/15">{availableRoles.map((value) => <option key={value}>{value}</option>)}</select></label>}
+            {availableRoles.length > 1 && availableRoles.includes(role) && <label className="flex items-center gap-2 text-sm text-[#807787]"><span className="hidden sm:inline">โหมด</span><select value={role} aria-label="เลือกโหมดทำงาน" onChange={async (event) => { const next = event.target.value as Role; const response = await fetch("/api/profile/mode", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: next === "Advisor" ? "ADVISOR" : "ADVISEE" }) }); const result = await response.json(); if (response.ok) router.refresh(); else toast.error(result.error ?? "เปลี่ยนโหมดไม่สำเร็จ"); }} className="h-10 rounded-xl border border-[#e7e1eb] bg-white px-2.5 text-sm font-semibold text-[#4d4258] outline-none focus-visible:ring-4 focus-visible:ring-[#85619c]/15">{availableRoles.map((value) => <option key={value}>{value}</option>)}</select></label>}
             <Button variant="outline" size="icon" aria-label="การแจ้งเตือน" className="relative size-10 rounded-xl border-[#e8e4ec] text-[#716879]"><Bell className="size-4" /><span className="absolute right-2 top-2 size-1.5 rounded-full bg-[#7da245]" /></Button>
-            {!demo && <Button variant="ghost" size="icon" aria-label="ออกจากระบบ" onClick={() => void signOut()} className="size-10 rounded-xl text-[#716879]"><LogOut className="size-4" /></Button>}
+            <Button variant="ghost" size="icon" aria-label="ออกจากระบบ" onClick={() => void signOut()} className="size-10 rounded-xl text-[#716879]"><LogOut className="size-4" /></Button>
           </div>
         </header>
         {mobileMenuOpen && <nav aria-label="เมนูหลัก" className="mx-auto grid max-w-[1540px] grid-cols-2 gap-2 pb-4 sm:grid-cols-3 lg:hidden">{nav.map(({ label, icon: Icon }) => <NavButton key={label} label={label} icon={Icon} active={active === label} onClick={() => changeActive(label)} compact />)}</nav>}
@@ -257,7 +228,7 @@ export default function Dashboard({ demo = true, initialItems = initialResearch,
             </Card>}
           </>}
 
-          {(active === "ทีม" && !demo) ? <TeamDirectory people={team ?? []} loading={team === null} /> : active === "จัดการผู้ใช้" && isManager ?
+          {active === "ทีม" ? <TeamDirectory people={team ?? []} loading={team === null} /> : active === "จัดการผู้ใช้" && isManager ?
             <UserDirectory people={people} onChange={setPeople} canAssignSystemRole={role === "Superadmin" || systemRole === "SUPERADMIN"} /> :
             <div className="grid items-start gap-5 2xl:grid-cols-[minmax(0,1fr)_340px]">
               <ProjectList items={filtered} active={active} query={query} stageFilter={stageFilter} onQueryChange={setQuery} onStageChange={setStageFilter} onSelect={setSelected} />
@@ -267,7 +238,7 @@ export default function Dashboard({ demo = true, initialItems = initialResearch,
                 {isManager && <Card className="rounded-[1.5rem] border-[#e8e3ed] bg-gradient-to-br from-[#f8f4fb] to-[#f2f7ec] shadow-none"><CardContent className="flex items-start gap-3 p-5"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-[#704b8d] shadow-sm"><Users className="size-5" /></span><div><h2 className="text-base font-semibold text-[#42364d]">บัญชีเข้าใช้งาน</h2><p className="mt-1 text-sm leading-6 text-[#756d7e]">ลงทะเบียน CID และกำหนดบทบาทก่อนเริ่มใช้งาน</p><Button variant="ghost" className="mt-2 h-10 px-0 text-[#694786]" onClick={() => changeActive("จัดการผู้ใช้")}>จัดการผู้ใช้ <ArrowRight className="size-4" /></Button></div></CardContent></Card>}
               </aside>
             </div>}
-          <footer className="mt-8 hidden items-center justify-between border-t border-[#e8e4ec] pt-5 text-sm text-[#8a8292] sm:flex"><span>Research Tracker · ระบบติดตามความก้าวหน้างานวิจัย</span><span>{demo ? "ข้อมูลตัวอย่าง · บันทึกในเบราว์เซอร์" : "พื้นที่ทำงานส่วนบุคคล"}</span></footer>
+          <footer className="mt-8 hidden items-center justify-between border-t border-[#e8e4ec] pt-5 text-sm text-[#8a8292] sm:flex"><span>Research Tracker · ระบบติดตามความก้าวหน้างานวิจัย</span><span>พื้นที่ทำงานส่วนบุคคล</span></footer>
         </div>
       </main>
 
@@ -275,8 +246,8 @@ export default function Dashboard({ demo = true, initialItems = initialResearch,
         {nav.filter((item) => item.label !== "จัดการผู้ใช้").slice(0, 4).map(({ label, icon: Icon }) => <button key={label} onClick={() => changeActive(label)} className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl text-xs font-medium transition ${active === label ? "text-[#65418a]" : "text-[#847b8c]"}`}><Icon className="size-5" /><span>{label}</span></button>)}
       </nav>
 
-      <ProjectDialog key={selectedItem?.id ?? "closed"} item={selectedItem} role={role} systemRole={systemRole} person={person} people={people} demo={demo} onClose={() => setSelected(null)} onSave={updateProject} />
-      <CreateProjectDialog open={creating} people={people} demo={demo} onOpenChange={setCreating} onCreate={createProject} />
+      <ProjectDialog key={selectedItem?.id ?? "closed"} item={selectedItem} role={role} systemRole={systemRole} person={person} people={people} onClose={() => setSelected(null)} onSave={updateProject} />
+      <CreateProjectDialog open={creating} people={people} onOpenChange={setCreating} onCreate={createProject} />
     </div>
   );
 }
@@ -362,22 +333,22 @@ function AttentionPanel({ items, total, onSelect, onViewAll }: { items: Research
   </Card>;
 }
 
-function CreateProjectDialog({ open, people, demo, onOpenChange, onCreate }: { open: boolean; people: DirectoryPerson[]; demo: boolean; onOpenChange: (open: boolean) => void; onCreate: (project: ProjectInput) => void }) {
+function CreateProjectDialog({ open, people, onOpenChange, onCreate }: { open: boolean; people: DirectoryPerson[]; onOpenChange: (open: boolean) => void; onCreate: (project: ProjectInput) => void }) {
   const [title, setTitle] = useState("");
   const [student, setStudent] = useState("");
   const [faculty, setFaculty] = useState("");
   const [primaryAdvisor, setPrimaryAdvisor] = useState("");
   const [secondaryAdvisorIds, setSecondaryAdvisorIds] = useState<string[]>([]);
   const [dueDate, setDueDate] = useState("");
-  const students = demo ? Array.from(new Set(initialResearch.map((item) => item.student))).map((name) => ({ id: name, name })) : people.filter((entry) => entry.capabilities.includes("ADVISEE") && entry.active !== false).map((entry) => ({ id: entry.id, name: entry.name }));
-  const advisors = demo ? Array.from(new Set(initialResearch.flatMap((item) => item.advisor))).map((name) => ({ id: name, name })) : people.filter((entry) => entry.capabilities.includes("ADVISOR") && entry.active !== false).map((entry) => ({ id: entry.id, name: entry.name }));
+  const students = people.filter((entry) => entry.capabilities.includes("ADVISEE") && entry.active !== false).map((entry) => ({ id: entry.id, name: entry.name }));
+  const advisors = people.filter((entry) => entry.capabilities.includes("ADVISOR") && entry.active !== false).map((entry) => ({ id: entry.id, name: entry.name }));
   const primaryName = advisors.find((entry) => entry.id === primaryAdvisor)?.name ?? "";
   const secondaryNames = secondaryAdvisorIds.map((id) => advisors.find((entry) => entry.id === id)?.name ?? id);
 
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!title.trim() || !student || !primaryAdvisor || !dueDate) return;
-    onCreate({ title: title.trim(), student: students.find((entry) => entry.id === student)?.name ?? student, faculty, advisor: [primaryName, ...secondaryNames], primaryAdvisor: primaryName, secondaryAdvisors: secondaryNames, stage: 0, progress: 0, dueDate, issue: "", nextTask: "", review: "ยังไม่ส่งตรวจ", adviseeId: demo ? undefined : student, primaryAdvisorId: demo ? undefined : primaryAdvisor, secondaryAdvisorIds: demo ? undefined : secondaryAdvisorIds });
+    onCreate({ title: title.trim(), student: students.find((entry) => entry.id === student)?.name ?? student, faculty, advisor: [primaryName, ...secondaryNames], primaryAdvisor: primaryName, secondaryAdvisors: secondaryNames, stage: 0, progress: 0, dueDate, issue: "", nextTask: "", review: "ยังไม่ส่งตรวจ", adviseeId: student, primaryAdvisorId: primaryAdvisor, secondaryAdvisorIds });
   };
 
   return <Dialog open={open} onOpenChange={onOpenChange}>
@@ -399,7 +370,7 @@ function CreateProjectDialog({ open, people, demo, onOpenChange, onCreate }: { o
   </Dialog>;
 }
 
-function ProjectDialog({ item, role, systemRole, person, people, demo, onClose, onSave }: { item: Research | null; role: Role; systemRole: string; person: string; people: DirectoryPerson[]; demo: boolean; onClose: () => void; onSave: (id: string, updates: ResearchChanges, description: string) => void }) {
+function ProjectDialog({ item, role, systemRole, person, people, onClose, onSave }: { item: Research | null; role: Role; systemRole: string; person: string; people: DirectoryPerson[]; onClose: () => void; onSave: (id: string, updates: ResearchChanges, description: string) => void }) {
   const [stage, setStage] = useState(item?.stage ?? 0);
   const [progress, setProgress] = useState(item?.progress ?? 0);
   const [issue, setIssue] = useState(item?.issue ?? "");
@@ -411,7 +382,7 @@ function ProjectDialog({ item, role, systemRole, person, people, demo, onClose, 
   const isManager = role === "PM" || role === "Superadmin" || systemRole === "PM" || systemRole === "SUPERADMIN";
   const mayEdit = isManager || role !== "Advisor";
   const maySetReview = role === "Advisor" && item?.isMyAdvisor === true;
-  const advisorOptions = demo ? Array.from(new Set(initialResearch.flatMap((entry) => entry.advisor))).map((name) => ({ id: name, name })) : people.filter((entry) => entry.capabilities.includes("ADVISOR") && entry.active !== false).map((entry) => ({ id: entry.id, name: entry.name }));
+  const advisorOptions = people.filter((entry) => entry.capabilities.includes("ADVISOR") && entry.active !== false).map((entry) => ({ id: entry.id, name: entry.name }));
   const [primaryAdvisorId, setPrimaryAdvisorId] = useState(advisorOptions.find((entry) => entry.name === item?.primaryAdvisor)?.id ?? advisorOptions.find((entry) => entry.name === item?.advisor[0])?.id ?? "");
   const [secondaryAdvisorIds, setSecondaryAdvisorIds] = useState<string[]>(advisorOptions.filter((entry) => item?.secondaryAdvisors?.includes(entry.name)).map((entry) => entry.id));
 
@@ -433,7 +404,7 @@ function ProjectDialog({ item, role, systemRole, person, people, demo, onClose, 
     const assignmentChanged = isManager && (primaryName !== oldPrimary || [...secondaryNames].sort().join("|") !== [...oldSecondary].sort().join("|"));
     if (assignmentChanged) {
       descriptions.push("ปรับอาจารย์ที่ปรึกษาหลักและรอง");
-      Object.assign(changes, { primaryAdvisor: primaryName, secondaryAdvisors: secondaryNames, advisor: [primaryName, ...secondaryNames], ...(demo ? {} : { primaryAdvisorId, secondaryAdvisorIds }) });
+      Object.assign(changes, { primaryAdvisor: primaryName, secondaryAdvisors: secondaryNames, advisor: [primaryName, ...secondaryNames], primaryAdvisorId, secondaryAdvisorIds });
     }
     if (maySetReview && comment.trim()) {
       descriptions.push("เพิ่มความเห็นจากที่ปรึกษ");

@@ -5,11 +5,11 @@ import { canManageProjects, canManageUsers } from "@/lib/roles";
 import { getSignedInProfile } from "@/lib/server-access";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import Dashboard from "./dashboard";
+import Dashboard from "@/features/research/components/dashboard";
 
 export default function Home() {
   return (
-    <Suspense fallback={<main className="loading-screen">กำลังตรวจสอบบัญชีและโหลดงานวิจัย…</main>}>
+    <Suspense fallback={<main className="grid min-h-[70svh] place-items-center px-4 text-base text-[#777080]">กำลังตรวจสอบบัญชีและโหลดงานวิจัย…</main>}>
       <ResearchDashboard />
     </Suspense>
   );
@@ -61,7 +61,6 @@ async function ResearchDashboard() {
       availableRoles={availableModes.map((mode) => mode === "ADVISOR" ? "Advisor" : "Advisee")}
       systemRole={profile.systemRole}
       personName={profile.fullName}
-      demo={false}
       directory={directory.map((person) => ({
         id: person.id,
         name: person.fullName,

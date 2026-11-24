@@ -1,5 +1,5 @@
 import "server-only";
-import type { Research, ReviewStatus } from "@/lib/demo-data";
+import type { Research, ReviewStatus } from "@/lib/research-types";
 import type { Prisma } from "@/generated/prisma/client";
 
 export function projectInclude() {

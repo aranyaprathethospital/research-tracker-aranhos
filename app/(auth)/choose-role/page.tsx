@@ -1,10 +1,10 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getSignedInProfile } from "@/lib/server-access";
-import RolePicker from "./role-picker";
+import RolePicker from "@/features/auth/components/role-picker";
 
 export default function ChooseRolePage() {
-  return <Suspense fallback={<main className="loading-screen">กำลังโหลดโหมดทำงาน…</main>}><ChooseRolePageContent /></Suspense>;
+  return <Suspense fallback={<main className="grid min-h-[60svh] place-items-center px-4 text-base text-[#777080]">กำลังโหลดโหมดทำงาน…</main>}><ChooseRolePageContent /></Suspense>;
 }
 
 async function ChooseRolePageContent() {

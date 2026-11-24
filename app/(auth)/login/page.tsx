@@ -1,9 +1,7 @@
-import { ArrowUpRight, CheckCircle2, ShieldCheck } from "lucide-react";
-import Link from "next/link";
+import { CheckCircle2, ShieldCheck } from "lucide-react";
 import { isProviderIdConfigured } from "@/lib/provider-id";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import ProviderLogin from "./provider-login";
+import ProviderLogin from "@/features/auth/components/provider-login";
 
 export default async function LoginPage() {
   const enabled = isProviderIdConfigured();
@@ -26,10 +24,6 @@ export default async function LoginPage() {
           <div className="mt-6 flex items-start gap-3 rounded-2xl bg-[#f7f4fa] p-4 text-sm leading-6 text-[#665b70]">
             <ShieldCheck className="mt-0.5 size-5 shrink-0 text-[#79539a]" />
             <p>เข้าสู่ระบบได้เมื่อมีรายชื่อและ CID ที่ลงทะเบียนไว้กับผู้ดูแลระบบแล้ว</p>
-          </div>
-          <div className="mt-6 flex items-center justify-between border-t border-[#eeeaf2] pt-5 text-sm">
-            <span className="text-[#817989]">ต้องการดูก่อนใช้งานจริง?</span>
-            <Link href="/demo" className="inline-flex h-10 items-center gap-2 rounded-xl px-2 font-semibold text-[#694586] hover:bg-[#f7f3fa]">เปิดโหมดตัวอย่าง <ArrowUpRight className="size-4" /></Link>
           </div>
         </CardContent>
       </Card>

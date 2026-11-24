@@ -1,4 +1,4 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
@@ -31,7 +31,6 @@
   --radius: 1rem;
   --card-spacing: 1.25rem;
 }
-
 @theme inline {
   --font-sans: var(--font-geist-sans), "Noto Sans Thai", Tahoma, Arial, sans-serif;
   --font-heading: var(--font-geist-sans), "Noto Sans Thai", Tahoma, Arial, sans-serif;
@@ -62,18 +61,4 @@
   --radius-md: calc(var(--radius) - 0.25rem);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 0.25rem);
-}
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-
-  html {
-    @apply font-sans;
-  }
-
-  body {
-    @apply bg-background text-foreground antialiased;
-  }
 }

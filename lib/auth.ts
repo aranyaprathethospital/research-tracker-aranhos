@@ -13,7 +13,7 @@ const nestedData = (value: unknown) => asRecord(asRecord(value).data);
 
 const moph = providerIdConfig();
 const providerEnabled = isProviderIdConfigured();
-// Keep the app buildable for the UI demo without committing a reusable auth secret.
+// Keep local development buildable without committing a reusable auth secret.
 const authSecret = process.env.BETTER_AUTH_SECRET ?? randomBytes(32).toString("base64url");
 
 const providerPlugin = providerEnabled ? genericOAuth({
