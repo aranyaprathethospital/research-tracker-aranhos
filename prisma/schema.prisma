@@ -125,12 +125,15 @@ model ResearchProject {
   id          String   @id @default(cuid())
   projectCode String   @unique
   title       String
+  titleVersion Int     @default(1)
+  titleHistory ResearchTitleVersion[]
   faculty     String?
   stage       Int      @default(0)
   stageProgress Int    @default(0)
   dueDate     DateTime?
   issue       String   @default("")
   nextTask    String   @default("")
+  notes       String   @default("")
   adviseeId   String
   advisee     ResearchProfile @relation("AdviseeProjects", fields: [adviseeId], references: [id], onDelete: Restrict)
   advisors    ResearchProjectAdvisor[]
@@ -144,6 +147,17 @@ model ResearchProject {
   @@index([stage])
   @@index([dueDate])
   @@index([updatedAt])
+}
+
+model ResearchTitleVersion {
+  projectId String
+  version   Int
+  title     String
+  author    String?
+  createdAt DateTime?
+  project   ResearchProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, version])
 }
 
 model ResearchProjectAdvisor {

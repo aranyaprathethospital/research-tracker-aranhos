@@ -73,6 +73,7 @@ async function ResearchDashboard() {
       )}
       systemRole={profile.systemRole}
       personName={profile.fullName}
+      currentProfileId={profile.id}
       directory={directory.map((person) => ({
         id: person.id,
         name: person.fullName,

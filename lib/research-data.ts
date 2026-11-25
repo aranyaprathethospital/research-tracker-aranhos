@@ -1,10 +1,11 @@
 import "server-only";
-import type { Research, ReviewStatus } from "@/lib/research-types";
+import { progressFromStage, type Research, type ReviewStatus } from "@/lib/research-types";
 import type { Prisma } from "@/generated/prisma/client";
 
 export function projectInclude() {
   return {
     advisee: { select: { fullName: true } },
+    titleHistory: { orderBy: { version: "desc" as const } },
     advisors: { include: { advisor: { select: { fullName: true } } }, orderBy: { assignedAt: "asc" as const } },
     reviews: { orderBy: { updatedAt: "desc" as const } },
     comments: { include: { author: { select: { fullName: true } } }, orderBy: { createdAt: "desc" as const } },
@@ -30,7 +31,12 @@ export function toResearchItem(project: ProjectWithDetails, advisorId?: string):
   }));
   return {
     id: project.id,
+    adviseeId: project.adviseeId,
     title: project.title,
+    titleVersion: project.titleVersion,
+    titleHistory: project.titleHistory.map(({ version, title, author, createdAt }) => ({
+      version, title, author, createdAt: createdAt?.toISOString() ?? null,
+    })),
     student: project.advisee.fullName,
     faculty: project.faculty ?? "",
     advisor: project.advisors.map((entry) => entry.advisor.fullName),
@@ -40,10 +46,11 @@ export function toResearchItem(project: ProjectWithDetails, advisorId?: string):
     myReview: isMyAdvisor ? (selfReview?.status ?? defaultReview) as ReviewStatus : undefined,
     isMyAdvisor: advisorId ? isMyAdvisor : undefined,
     stage: project.stage,
-    progress: project.stageProgress,
+    progress: progressFromStage(project.stage),
     dueDate: project.dueDate?.toISOString().slice(0, 10) ?? "",
     issue: project.issue,
     nextTask: project.nextTask,
+    notes: project.notes,
     review: (primaryReview?.status ?? defaultReview) as ReviewStatus,
     updatedAt: project.updatedAt.toISOString(),
     history: project.updates.map((entry) => ({ text: entry.summary, date: entry.createdAt.toISOString(), by: entry.actor.fullName })),

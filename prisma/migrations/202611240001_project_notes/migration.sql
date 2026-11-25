@@ -1,0 +1,1 @@
+ALTER TABLE "ResearchProject" ADD COLUMN "notes" TEXT NOT NULL DEFAULT '';

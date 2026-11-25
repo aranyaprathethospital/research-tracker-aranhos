@@ -1,3 +1,4 @@
+import { progressFromStage, stages } from "@/lib/research-types";
 import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { ProfileCapability } from "@/generated/prisma/client";
@@ -18,7 +19,7 @@ const validDate = (value: unknown) => {
 export async function POST(request: Request) {
   const context = await getProfileForRequest(request.headers);
   if (!context) return response(401, "Sign in to continue.");
-  if (!canManageProjects(context.profile.systemRole)) return response(403, "Only PM or Superadmin can create research projects.");
+  if (context.profile.systemRole !== "PM") return response(403, "เฉพาะ PM ที่สร้างโครงการและเลือกที่ปรึกษาได้");
 
   const body = await request.json().catch(() => null);
   if (!body || typeof body.title !== "string" || !body.title.trim() || typeof body.adviseeId !== "string" || typeof body.primaryAdvisorId !== "string" || !Array.isArray(body.secondaryAdvisorIds)) {
@@ -39,6 +40,7 @@ export async function POST(request: Request) {
     data: {
       projectCode: `R-${randomBytes(4).toString("hex").toUpperCase()}`,
       title: body.title.trim(),
+      titleHistory: { create: { version: 1, title: body.title.trim(), author: context.profile.fullName, createdAt: new Date() } },
       faculty: typeof body.faculty === "string" ? body.faculty.trim() : null,
       dueDate: due.date,
       adviseeId: advisee.id,
@@ -71,31 +73,27 @@ export async function PATCH(request: Request) {
   const isAdvisor = activeMode === ProfileCapability.ADVISOR && project.advisors.some((advisor) => advisor.advisorId === profile.id);
   if (!manager && !isAdvisee && !isAdvisor) return response(403, "You do not have access to this research project.");
 
-  const allowed = ["stage", "progress", "issue", "nextTask", "dueDate", "review", "comment", "primaryAdvisorId", "secondaryAdvisorIds"];
+  const allowed = ["stage", "issue", "nextTask", "notes", "dueDate", "review", "comment", "primaryAdvisorId", "secondaryAdvisorIds"];
   if (Object.keys(body).some((key) => key !== "id" && !allowed.includes(key))) return response(400, "The request includes an unsupported field.");
   if (isAdvisor && !manager && Object.keys(body).some((key) => key !== "id" && key !== "review" && key !== "comment")) {
     return response(403, "Advisor access can only update an assigned review and comment.");
   }
   if (isAdvisee && !manager && ("review" in body || "comment" in body)) return response(403, "Advisee access cannot edit advisor reviews or comments.");
-  if (("primaryAdvisorId" in body || "secondaryAdvisorIds" in body) && !manager) return response(403, "Only PM or Superadmin can assign advisors.");
+  if (("primaryAdvisorId" in body || "secondaryAdvisorIds" in body) && profile.systemRole !== "PM") return response(403, "เฉพาะ PM ที่แก้ไขที่ปรึกษาหลักและที่ปรึกษารองได้");
 
-  const changes: { stage?: number; stageProgress?: number; issue?: string; nextTask?: string; dueDate?: Date | null } = {};
+  const changes: { stage?: number; stageProgress?: number; issue?: string; nextTask?: string; notes?: string; dueDate?: Date | null } = {};
   const summaries: string[] = [];
   if ("stage" in body) {
-    if (!Number.isInteger(body.stage) || body.stage < 0 || body.stage > 7) return response(400, "Stage must be between 0 and 7.");
+    if (!Number.isInteger(body.stage) || body.stage < 0 || body.stage >= stages.length) return response(400, "Stage must be between 0 and 7.");
     changes.stage = body.stage;
+    changes.stageProgress = progressFromStage(body.stage);
     summaries.push(`Changed stage to ${body.stage}`);
   }
-  if ("progress" in body) {
-    if (!Number.isInteger(body.progress) || body.progress < 0 || body.progress > 100) return response(400, "Progress must be between 0 and 100.");
-    changes.stageProgress = body.progress;
-    summaries.push(`Updated progress to ${body.progress}%`);
-  }
-  for (const field of ["issue", "nextTask"] as const) {
+  for (const field of ["issue", "nextTask", "notes"] as const) {
     if (!(field in body)) continue;
     if (typeof body[field] !== "string" || body[field].length > 4000) return response(400, `Invalid ${field}.`);
     changes[field] = body[field].trim();
-    summaries.push(`Updated ${field === "issue" ? "project issue" : "next task"}`);
+    summaries.push(`Updated ${field === "issue" ? "project issue" : field === "notes" ? "project notes" : "current results"}`);
   }
   if ("dueDate" in body) {
     const due = validDate(body.dueDate);
