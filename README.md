@@ -186,13 +186,13 @@ CID จริงไม่ถูกเก็บใน `ResearchProfile`; ระ�
 | `/account/password` | ตั้งหรือเปลี่ยนรหัสผ่าน |
 | `/choose-role` | เลือก Advisor/Advisee เมื่อได้รับทั้งสองความสามารถ |
 | `/` | dashboard/workspace หลังเข้าสู่ระบบ |
-| `/projects` | ค้นหาและจัดการโครงการ ลิงก์จากภาพรวมระบุ `?stage=` หรือ `?filter=due` และ `?filter=attention` ได้ |
+| `/projects` | ค้นหาและจัดการโครงการ PM สามารถลบงานวิจัยจากหน้ารายละเอียดได้ ลิงก์จากภาพรวมรองรับ `?stage=`, `?filter=due` และ `?filter=attention` |
 | `/comments` | อ่านและค้นหาความเห็นล่าสุด พร้อมเปิดรายละเอียดโครงการ |
 | `/team` | ค้นหาสมาชิกตามชื่อ ตำแหน่ง และกลุ่มงาน |
 | `/notifications` | ดูการแจ้งเตือนและเปิดโครงการจากกิจกรรม |
 | `/advisors` | สรุปภาระงานที่ปรึกษาหลักสำหรับ PM |
 | `/users` | จัดการบัญชีและสิทธิ์สำหรับ PM และ Superadmin |
-| `/profile` | ดูและแก้ไขข้อมูลส่วนตัว |
+| `/profile` | ดูและแก้ไขข้อมูลส่วนตัว อัปโหลด ลบ หรือสุ่มรูปโปรไฟล์การ์ตูนพยาบาล |
 
 API handlers อยู่ใต้ `app/api/` สำหรับ auth, account, profile, media, users, team และ projects โดยแต่ละ handler ต้องตรวจ session และสิทธิ์บน server
 

@@ -56,7 +56,7 @@ export default function Dashboard({ view: active, projectId, focusReview, altern
     const source = projectFilter === "due" ? deadlines : projectFilter === "attention" ? attention : items;
     const search = deferredQuery.trim().toLocaleLowerCase();
     return source.filter((item) => (stageFilter === "ทั้งหมด" || item.stage === Number(stageFilter))
-      && (!search || `${item.title} ${item.student} ${item.id} ${item.faculty} ${item.advisor.join(" ")}`.toLocaleLowerCase().includes(search)));
+      && (!search || `${item.title} ${item.student} ${item.id} ${item.advisor.join(" ")}`.toLocaleLowerCase().includes(search)));
   }, [attention, deadlines, deferredQuery, items, projectFilter, stageFilter]);
 
   useEffect(() => {
@@ -114,6 +114,20 @@ export default function Dashboard({ view: active, projectId, focusReview, altern
       }
       toast.success("เพิ่มงานวิจัยแล้ว");
     }).catch((error: unknown) => toast.error(error instanceof Error ? error.message : "สร้างรายการไม่สำเร็จ ตรวจสอบข้อมูลและสิทธิ์ PM"));
+  };
+
+  const deleteProject = async (id: string) => {
+    const response = await workspaceFetch("/api/projects", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    if (!response.ok) {
+      const result = await response.json().catch(() => null);
+      throw new Error(result?.error ?? "ลบงานวิจัยไม่สำเร็จ กรุณาลองอีกครั้ง");
+    }
+    setItems((current) => current.filter((item) => item.id !== id));
+    toast.success("ลบงานวิจัยแล้ว");
   };
 
   return (
@@ -182,7 +196,7 @@ export default function Dashboard({ view: active, projectId, focusReview, altern
           if (initialFilter !== "all") params.set("filter", initialFilter);
           router.replace(params.size ? `/projects?${params}` : "/projects", { scroll: false });
         }
-      }} onSave={updateProject} />}
+      }} onSave={updateProject} onDelete={active === "งานวิจัย" && systemRole === "PM" ? deleteProject : undefined} />}
       {creating && <CreateProjectDialog open people={people} onOpenChange={setCreating} onCreate={createProject} />}
     </WorkspaceShell>
   );

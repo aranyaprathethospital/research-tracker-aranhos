@@ -1,6 +1,8 @@
 import { progressFromStage, stages } from "@/lib/research-types";
+import { formatResearchHistory } from "@/lib/research-history";
 import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { ProfileCapability } from "@/generated/prisma/client";
 import { getProfileForRequest } from "@/lib/server-access";
 import { prisma } from "@/lib/prisma";
@@ -8,6 +10,7 @@ import { projectInclude, toResearchItem } from "@/lib/research-data";
 import { canManageProjects, hasCapability } from "@/lib/roles";
 
 const reviewStatuses = ["ยังไม่ส่งตรวจ", "ส่งตรวจ", "ขอแก้ไข", "อนุมัติ"] as const;
+const deleteProjectInput = z.object({ id: z.string().trim().min(1) });
 const response = (status: number, message: string) => NextResponse.json({ error: message }, { status });
 const validDate = (value: unknown) => {
   if (value === undefined || value === null || value === "") return { valid: true, date: null as Date | null };
@@ -15,6 +18,18 @@ const validDate = (value: unknown) => {
   const date = new Date(`${value}T00:00:00.000Z`);
   return { valid: !Number.isNaN(date.valueOf()), date };
 };
+
+export async function DELETE(request: Request) {
+  const context = await getProfileForRequest(request.headers);
+  if (!context) return response(401, "กรุณาเข้าสู่ระบบ");
+  if (context.profile.systemRole !== "PM") return response(403, "เฉพาะ PM ที่ลบงานวิจัยได้");
+
+  const parsed = deleteProjectInput.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return response(400, "กรุณาระบุโครงการที่จะลบ");
+
+  await prisma.researchProject.deleteMany({ where: { id: parsed.data.id } });
+  return new Response(null, { status: 204 });
+}
 
 export async function POST(request: Request) {
   const context = await getProfileForRequest(request.headers);
@@ -41,14 +56,13 @@ export async function POST(request: Request) {
       projectCode: `R-${randomBytes(4).toString("hex").toUpperCase()}`,
       title: body.title.trim(),
       titleHistory: { create: { version: 1, title: body.title.trim(), author: context.profile.fullName, createdAt: new Date() } },
-      faculty: typeof body.faculty === "string" ? body.faculty.trim() : null,
       dueDate: due.date,
       adviseeId: advisee.id,
       advisors: {
         create: advisorIds.map((advisorId) => ({ advisorId, assignmentType: advisorId === body.primaryAdvisorId ? "PRIMARY" : "SECONDARY" })),
       },
       reviews: { create: advisorIds.map((advisorId) => ({ advisorId, status: reviewStatuses[0], updatedAt: new Date() })) },
-      updates: { create: { actorId: context.profile.id, summary: "Created research project" } },
+      updates: { create: { actorId: context.profile.id, summary: formatResearchHistory("Created research project") } },
       notifications: { create: [...new Set([advisee.id, ...advisorIds])].filter((id) => id !== context.profile.id).map((recipientId) => ({
         recipientId,
         kind: "assignment",
@@ -182,10 +196,10 @@ export async function PATCH(request: Request) {
       });
     }
     if (Object.keys(changes).length) await tx.researchProject.update({ where: { id: project.id }, data: changes });
-    if (summaries.length) await tx.researchUpdate.create({ data: { projectId: project.id, actorId: profile.id, summary: summaries.join(" · ") } });
+    if (summaries.length) await tx.researchUpdate.create({ data: { projectId: project.id, actorId: profile.id, summary: formatResearchHistory(summaries.join(" · ")) } });
     if ("comment" in body) {
       await tx.advisorComment.create({ data: { projectId: project.id, authorId: profile.id, body: body.comment.trim() } });
-      await tx.researchUpdate.create({ data: { projectId: project.id, actorId: profile.id, summary: "Added advisor comment" } });
+      await tx.researchUpdate.create({ data: { projectId: project.id, actorId: profile.id, summary: formatResearchHistory("Added advisor comment") } });
     }
     if (project.adviseeId !== profile.id && (reviewChanged || "comment" in body)) {
       await tx.researchNotification.create({ data: {

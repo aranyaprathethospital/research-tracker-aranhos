@@ -35,6 +35,7 @@ export async function uploadProfileFile(path: string, bytes: ArrayBuffer, conten
     },
     body: bytes,
     cache: "no-store",
+    signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) throw new Error(`Supabase Storage upload failed (${response.status}).`);
 }
@@ -46,6 +47,7 @@ export async function removeProfileFiles(paths: string[]) {
     headers: { ...storageHeaders(key), "Content-Type": "application/json" },
     body: JSON.stringify({ prefixes: paths }),
     cache: "no-store",
+    signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) throw new Error(`Supabase Storage cleanup failed (${response.status}).`);
 }

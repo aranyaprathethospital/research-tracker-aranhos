@@ -26,6 +26,7 @@ export async function GET(request: Request) {
       mission: context.profile.mission,
       workGroup: context.profile.workGroup,
       avatarUrl,
+      hasAvatar: Boolean(context.profile.avatarPath),
       signatureUrl,
       mustChangePassword: context.profile.mustChangePassword,
     },

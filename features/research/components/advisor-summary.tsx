@@ -56,7 +56,7 @@ export default function AdvisorSummary({ advisors }: { advisors: AdvisorWorkload
 
   return (
     <>
-      <PageHeading eyebrow="จัดการระบบ" title="สรุปที่ปรึกษาหลัก" description="ดูจำนวนโครงการและความคืบหน้าของที่ปรึกษาหลักแต่ละคน" />
+      <PageHeading title="สรุปที่ปรึกษาหลัก" description="ดูจำนวนโครงการและความคืบหน้าของที่ปรึกษาหลักแต่ละคน" />
       <dl className="mb-5 grid grid-cols-2 overflow-hidden rounded-xl border border-[#e7e0d9] bg-[#fffcf8] divide-[#e7e0d9] xl:grid-cols-4 xl:divide-x">
         {metrics.map(({ label, value }) => (
           <div key={label} className="border-[#e7e0d9] p-4 first:border-r second:border-b nth-3:border-r nth-3:border-t sm:p-5 xl:border-0">

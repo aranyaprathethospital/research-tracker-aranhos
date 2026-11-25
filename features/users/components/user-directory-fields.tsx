@@ -1,7 +1,7 @@
-export const capabilityNames = { ADVISOR: "Advisor", ADVISEE: "Advisee" } as const;
+export const capabilityNames = { ADVISOR: "advisor", ADVISEE: "advisee" } as const;
 
 export const systemRoleNames: Record<string, string> = {
-  USER: "ผู้ใช้ทั่วไป",
+  USER: "User",
   PM: "PM",
   SUPERADMIN: "Superadmin",
 };

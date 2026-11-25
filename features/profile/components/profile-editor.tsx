@@ -5,12 +5,13 @@ import { workspaceFetch } from "@/lib/workspace-fetch";
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { Camera, KeyRound, Mail, Upload, UserRound } from "lucide-react";
+import { Camera, KeyRound, Mail, Shuffle, Trash2, Upload, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import PageHeading from "@/features/workspace/components/page-heading";
 import WorkspaceShell from "@/features/workspace/components/workspace-shell";
@@ -23,7 +24,7 @@ import type { Role } from "@/lib/research-types";
 type Profile = {
   fullName: string; email: string; systemRole: string; capabilities: string[];
   position: string; positionLevel: string; mission: string; workGroup: string;
-  avatarUrl: string | null; signatureUrl: string | null;
+  avatarUrl: string | null; signatureUrl: string | null; hasAvatar: boolean;
 };
 
 type ProfileEditorProps = {
@@ -40,13 +41,17 @@ const workFields = [
   { key: "mission", label: "ภารกิจ" },
   { key: "workGroup", label: "กลุ่มงาน" },
 ] as const;
+const avatarPresetCount = 9;
 
 export default function ProfileEditor({ personName, role, systemRole, availableRoles, projectCount }: ProfileEditorProps) {
   const [loadFailed, setLoadFailed] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [name, setName] = useState("");
-  const [busy, setBusy] = useState<"profile" | "avatar" | "signature" | null>(null);
+  const [busy, setBusy] = useState<"profile" | "avatar" | "signature" | "avatar-delete" | null>(null);
+  const [avatarDialog, setAvatarDialog] = useState<"random" | "delete" | null>(null);
+  const [presetIndex, setPresetIndex] = useState<number | null>(null);
+  const presetUrl = presetIndex === null ? null : `/images/profile-avatars/nurse-${presetIndex + 1}.webp`;
   const fetchProfile = useCallback(async () => {
     const response = await workspaceFetch("/api/profile", { cache: "no-store" });
     const result = await response.json();
@@ -78,10 +83,19 @@ export default function ProfileEditor({ personName, role, systemRole, availableR
     finally { setBusy(null); }
   };
 
-  const upload = async (kind: "avatar" | "signature", file?: File) => {
-    if (!file || busy) return false;
+  const upload = async (kind: "avatar" | "signature", source?: File | string) => {
+    if (!source || busy) return false;
     setBusy(kind);
     try {
+      let file: File;
+      if (typeof source === "string") {
+        const preset = await fetch(source);
+        if (!preset.ok) throw new Error("โหลดภาพการ์ตูนไม่สำเร็จ กรุณาลองอีกครั้ง");
+        const blob = await preset.blob();
+        file = new File([blob], "nurse-avatar.webp", { type: blob.type });
+      } else {
+        file = source;
+      }
       const prepared = kind === "avatar" ? await prepareAvatar(file) : file;
       const form = new FormData();
       form.set("kind", kind);
@@ -90,7 +104,7 @@ export default function ProfileEditor({ personName, role, systemRole, availableR
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "อัปโหลดไฟล์ไม่สำเร็จ");
       const nextProfile = await fetchProfile();
-      setProfile((current) => current && { ...current, avatarUrl: nextProfile.avatarUrl, signatureUrl: nextProfile.signatureUrl });
+      setProfile((current) => current && { ...current, avatarUrl: nextProfile.avatarUrl, signatureUrl: nextProfile.signatureUrl, hasAvatar: nextProfile.hasAvatar });
       toast.success(kind === "avatar" ? "เปลี่ยนรูปโปรไฟล์แล้ว" : "บันทึกลายเซ็นแล้ว");
       return true;
     } catch (error) {
@@ -99,6 +113,29 @@ export default function ProfileEditor({ personName, role, systemRole, availableR
     }
     finally { setBusy(null); }
   };
+
+  function randomizeAvatar() {
+    const random = Math.random();
+    setPresetIndex((previous) => previous === null
+      ? Math.floor(random * avatarPresetCount)
+      : (previous + 1 + Math.floor(random * (avatarPresetCount - 1))) % avatarPresetCount);
+  }
+
+  async function deleteAvatar() {
+    if (busy) return;
+    setBusy("avatar-delete");
+    try {
+      const response = await workspaceFetch("/api/profile/media", { method: "DELETE" });
+      if (!response.ok) throw new Error("ลบรูปโปรไฟล์ไม่สำเร็จ กรุณาลองอีกครั้ง");
+      setProfile((current) => current && { ...current, avatarUrl: null, hasAvatar: false });
+      setAvatarDialog(null);
+      toast.success("ลบรูปโปรไฟล์แล้ว");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "ลบรูปโปรไฟล์ไม่สำเร็จ");
+    } finally {
+      setBusy(null);
+    }
+  }
 
   const roles = [...(profile?.systemRole === "USER" ? [] : profile ? [profile.systemRole] : []), ...(profile?.capabilities ?? [])];
 
@@ -118,9 +155,29 @@ export default function ProfileEditor({ personName, role, systemRole, availableR
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#eee8e2] pt-4">
               <FilePicker label="เปลี่ยนรูปโปรไฟล์" active={busy === "avatar"} disabled={busy !== null} onFile={(file) => void upload("avatar", file)} avatar />
+              <Button type="button" variant="outline" disabled={busy !== null} onClick={() => { randomizeAvatar(); setAvatarDialog("random"); }}><Shuffle aria-hidden />สุ่มรูป</Button>
+              {profile.hasAvatar && <Button type="button" variant="ghost" disabled={busy !== null} className="text-destructive" onClick={() => setAvatarDialog("delete")}><Trash2 aria-hidden />ลบรูปโปรไฟล์</Button>}
             </div>
           </CardContent>
         </Card>
+        <Dialog open={avatarDialog !== null} onOpenChange={(open) => { if (!open && !busy) setAvatarDialog(null); }}>
+          {avatarDialog && <DialogContent showCloseButton={!busy} className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold">{avatarDialog === "random" ? "สุ่มรูปโปรไฟล์" : "ลบรูปโปรไฟล์"}</DialogTitle>
+              <DialogDescription>{avatarDialog === "random" ? "เลือกภาพการ์ตูนพยาบาลในชุดเครื่องแบบสีขาว" : "ระบบจะลบรูปปัจจุบันและแสดงอักษรย่อของคุณแทน"}</DialogDescription>
+            </DialogHeader>
+            {avatarDialog === "random" && presetUrl && <Image src={presetUrl} alt={`ตัวอย่างภาพการ์ตูนพยาบาลรูปที่ ${(presetIndex ?? 0) + 1}`} width={240} height={240} unoptimized className="mx-auto size-48 rounded-full border border-border object-cover sm:size-56" />}
+            <DialogFooter className="flex-row flex-wrap justify-end">
+              <Button type="button" variant="outline" disabled={busy !== null} onClick={() => setAvatarDialog(null)}>ยกเลิก</Button>
+              {avatarDialog === "random" ? <>
+                <Button type="button" variant="outline" disabled={busy !== null} onClick={randomizeAvatar}><Shuffle aria-hidden />สุ่มใหม่</Button>
+                <Button type="button" disabled={busy !== null || !presetUrl} onClick={async () => {
+                  if (presetUrl && await upload("avatar", presetUrl)) setAvatarDialog(null);
+                }}>{busy === "avatar" ? "กำลังบันทึก…" : "ใช้รูปนี้"}</Button>
+              </> : <Button type="button" variant="destructive" disabled={busy !== null} onClick={() => void deleteAvatar()}>{busy === "avatar-delete" ? "กำลังลบ…" : "ยืนยันลบรูป"}</Button>}
+            </DialogFooter>
+          </DialogContent>}
+        </Dialog>
         <Card>
           <CardContent className="p-5 sm:p-6">
             <h2 className="text-xl font-bold">ลายเซ็น</h2>

@@ -8,7 +8,7 @@ export async function GET(request: Request) {
   if (!context) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const people = await prisma.researchProfile.findMany({
-    where: { active: true },
+    where: { active: true, systemRole: { not: "SUPERADMIN" } },
     select: {
       id: true,
       fullName: true,
@@ -19,7 +19,6 @@ export async function GET(request: Request) {
       mission: true,
       workGroup: true,
       avatarPath: true,
-      signaturePath: true,
     },
     orderBy: { fullName: "asc" },
   });
@@ -35,7 +34,6 @@ export async function GET(request: Request) {
       mission: person.mission,
       workGroup: person.workGroup,
       avatarUrl: profileFileHref(person.id, "avatar", person.avatarPath),
-      signatureUrl: profileFileHref(person.id, "signature", person.signaturePath),
     })),
   });
 }

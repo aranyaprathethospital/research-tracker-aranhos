@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { BadgeCheck, Check, IdCard, Plus, ShieldCheck, X } from "lucide-react";
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { capabilityNames, inputClass, selectClass, FormField } from "./user-directory-fields";
+import { capabilityNames, inputClass, selectClass, FormField, systemRoleNames } from "./user-directory-fields";
 import { capabilityValues, userFormSchema, type UserFormValues, type EditorMode, isValidThaiCid } from "./user-form-schema";
 
 export function UserEditorDialog({
@@ -257,11 +257,9 @@ export function UserEditorDialog({
                         {...form.register("systemRole")}
                         className={selectClass}
                       >
-                        <option value="USER">ผู้ใช้ทั่วไป</option>
-                        <option value="PM">PM · ผู้จัดการโครงการ</option>
-                        <option value="SUPERADMIN">
-                          Superadmin · ผู้ดูแลสูงสุด
-                        </option>
+                        <option value="USER">{systemRoleNames.USER}</option>
+                        <option value="PM">{systemRoleNames.PM}</option>
+                        <option value="SUPERADMIN">{systemRoleNames.SUPERADMIN}</option>
                       </select>
                     </FormField>
                   )}
@@ -297,11 +295,6 @@ export function UserEditorDialog({
                             <span className="min-w-0">
                               <span className="block text-sm font-semibold text-[#4e4358]">
                                 {capabilityNames[capability]}
-                              </span>
-                              <span className="block text-xs text-[#8b8292]">
-                                {capability === "ADVISEE"
-                                  ? "ผู้ทำวิจัย"
-                                  : "อาจารย์ที่ปรึกษา"}
                               </span>
                             </span>
                             {checked && (

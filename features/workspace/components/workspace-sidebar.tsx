@@ -3,12 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { BookOpenCheck, FlaskConical, LayoutDashboard, MessageSquareText, PanelLeftClose, PanelLeftOpen, UserRound, UserRoundCog, UsersRound, X, type LucideIcon } from "lucide-react";
+import { BookOpenCheck, FlaskConical, LayoutDashboard, MessageSquareText, PanelLeftClose, PanelLeftOpen, UserRoundCog, UsersRound, X, type LucideIcon } from "lucide-react";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { workspaceHref } from "@/features/workspace/navigation";
-import type { Role } from "@/lib/research-types";
 
 const workspaceItems = [
   { label: "ภาพรวม", icon: LayoutDashboard },
@@ -19,15 +17,11 @@ const workspaceItems = [
 
 const userManagement = { label: "จัดการผู้ใช้", icon: UserRoundCog };
 const advisorManagement = { label: "สรุปที่ปรึกษาหลัก", icon: BookOpenCheck };
-const profileItem = { label: "โปรไฟล์", icon: UserRound };
 
 type SidebarItem = { label: string; icon: LucideIcon };
 
 type WorkspaceSidebarProps = {
   activeItem: string;
-  personName: string;
-  avatarUrl?: string | null;
-  role: Role;
   systemRole: string;
   isManager: boolean;
   projectCount: number;
@@ -65,11 +59,11 @@ export default function WorkspaceSidebar(props: WorkspaceSidebarProps) {
         </DialogContent>
       </Dialog>
 
-      <nav aria-label="เมนูลัด" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 gap-1 border-t border-[#e7e0d9] bg-[#fffcf8] px-2 pt-1.5 pb-[max(env(safe-area-inset-bottom),.4rem)] lg:hidden">
-        {[...workspaceItems, profileItem].map(({ label, icon: Icon }) => {
+      <nav aria-label="เมนูลัด" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 gap-1 border-t border-[#e7e0d9] bg-[#fffcf8] px-2 pt-1.5 pb-[max(env(safe-area-inset-bottom),.4rem)] lg:hidden">
+        {workspaceItems.map(({ label, icon: Icon }) => {
           const active = props.activeItem === label;
           return (
-            <Link key={label} href={label === "โปรไฟล์" ? "/profile" : workspaceHref(label)} aria-current={active ? "page" : undefined} className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-1 text-sm font-bold leading-none focus-visible:outline-2 focus-visible:outline-primary ${active ? "bg-[#efe7f3] text-[#56366b]" : "text-[#6d636d] hover:bg-[#f3ede8]"}`}>
+            <Link key={label} href={workspaceHref(label)} aria-current={active ? "page" : undefined} className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-1 text-sm font-bold leading-none focus-visible:outline-2 focus-visible:outline-primary ${active ? "bg-[#efe7f3] text-[#56366b]" : "text-[#6d636d] hover:bg-[#f3ede8]"}`}>
               <Icon aria-hidden className="size-[17px]" strokeWidth={active ? 2 : 1.65} />
               {label}
             </Link>
@@ -80,10 +74,8 @@ export default function WorkspaceSidebar(props: WorkspaceSidebarProps) {
   );
 }
 
-function SidebarPanel({ activeItem, personName, avatarUrl, role, isManager, systemRole, projectCount, collapsed, onCollapsedChange, onMobileOpenChange, compact = false, mobile = false }: WorkspaceSidebarProps & { compact?: boolean; mobile?: boolean }) {
+function SidebarPanel({ activeItem, isManager, systemRole, projectCount, collapsed, onCollapsedChange, onMobileOpenChange, compact = false, mobile = false }: WorkspaceSidebarProps & { compact?: boolean; mobile?: boolean }) {
   const closeMobile = mobile ? () => onMobileOpenChange(false) : undefined;
-  const roleName = role === "Advisor" ? "ที่ปรึกษา" : role === "Advisee" ? "นักวิจัย" : systemRole === "PM" ? "ผู้จัดการโครงการ" : systemRole === "SUPERADMIN" ? "Superadmin" : "รอกำหนดบทบาท";
-  const initials = personName.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("") || "RT";
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#fffcf8]">
@@ -100,22 +92,13 @@ function SidebarPanel({ activeItem, personName, avatarUrl, role, isManager, syst
           <div className="space-y-1">
             {!compact && <p className="px-3 pb-1 text-sm font-bold text-[#786879]">พื้นที่ทำงาน</p>}
             {workspaceItems.map((item) => <SidebarNavItem key={item.label} item={item} active={activeItem === item.label} compact={compact} count={item.label === "งานวิจัย" ? projectCount : undefined} onNavigate={closeMobile} />)}
+            {systemRole === "PM" && <SidebarNavItem item={advisorManagement} active={activeItem === advisorManagement.label} compact={compact} onNavigate={closeMobile} />}
           </div>
           {isManager && <div className="space-y-1 border-t border-[#e7e0d9] pt-4">
             {!compact && <p className="px-3 pb-1 text-sm font-bold text-[#786879]">จัดการระบบ</p>}
             <SidebarNavItem item={userManagement} active={activeItem === userManagement.label} compact={compact} onNavigate={closeMobile} />
-            {systemRole === "PM" && <SidebarNavItem item={advisorManagement} active={activeItem === advisorManagement.label} compact={compact} onNavigate={closeMobile} />}
           </div>}
         </nav>
-      </div>
-      <div className={`border-t border-[#e7e0d9] ${compact ? "p-2" : "p-3.5"}`}>
-        <Link href="/profile" onNavigate={closeMobile} title={compact ? personName : undefined} aria-label={`โปรไฟล์ของ ${personName}`} aria-current={activeItem === "โปรไฟล์" ? "page" : undefined} className={`flex min-h-13 items-center gap-2.5 rounded-lg text-[#493651] hover:bg-[#f1eaf1] focus-visible:outline-2 focus-visible:outline-primary ${compact ? "justify-center" : "px-2.5"}`}>
-          <Avatar aria-hidden className="size-8 ring-1 ring-primary/15">
-            <AvatarImage src={avatarUrl ?? undefined} alt="" />
-            <AvatarFallback className="bg-[#efe7f3] text-sm font-bold text-primary">{initials}</AvatarFallback>
-          </Avatar>
-          {!compact && <span className="min-w-0 flex-1"><span className="block truncate text-base font-bold leading-none">{personName}</span><span className="mt-1 block truncate text-sm leading-none text-[#726477]">{roleName}</span></span>}
-        </Link>
       </div>
     </div>
   );

@@ -148,9 +148,8 @@ function PersonIdentity({
           {person.fullName ?? person.name}
         </span>
         <span className="mt-1 block truncate text-xs text-[#8b8292]">
-          {[person.position, person.positionLevel]
-            .filter(Boolean)
-            .join(" · ") || "ยังไม่ระบุตำแหน่ง"}
+          {[(person.position ?? "").trim(), (person.positionLevel ?? "").trim()]
+            .join("") || "ยังไม่ระบุตำแหน่ง"}
         </span>
         {compact && (
           <span className="mt-1 block truncate text-xs text-[#a097a7]">

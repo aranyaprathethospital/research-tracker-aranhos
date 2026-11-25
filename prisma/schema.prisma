@@ -129,7 +129,6 @@ model ResearchProject {
   titleVersion Int     @default(1)
   titleHistory ResearchTitleVersion[]
   notifications ResearchNotification[]
-  faculty     String?
   stage       Int      @default(0)
   stageProgress Int    @default(0)
   dueDate     DateTime?

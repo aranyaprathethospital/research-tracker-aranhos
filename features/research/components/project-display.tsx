@@ -1,17 +1,12 @@
 import { differenceInCalendarDays, format, parseISO } from "date-fns";
 import { th } from "date-fns/locale";
 import { CalendarDays } from "lucide-react";
-import { stages, type ReviewStatus } from "@/lib/research-types";
+import { reviewLabels, stages, type ReviewStatus } from "@/lib/research-types";
 import { Badge } from "@/components/ui/badge";
 
 export const reviews: ReviewStatus[] = ["ขอแก้ไข", "ยังไม่ส่งตรวจ", "ส่งตรวจ", "อนุมัติ"];
 
-export const reviewLabels: Record<ReviewStatus, string> = {
-  "ขอแก้ไข": "ส่งแก้ไข",
-  "ยังไม่ส่งตรวจ": "รอตรวจสอบ",
-  "ส่งตรวจ": "ตรวจสอบแล้ว",
-  "อนุมัติ": "ดำเนินการการเสร็จสิ้น",
-};
+export { reviewLabels };
 
 const bangkokDate = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" });
 const bangkokTimestamp = new Intl.DateTimeFormat("th-TH-u-ca-buddhist", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Bangkok", hourCycle: "h23" });

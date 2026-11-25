@@ -111,10 +111,7 @@ export default function WorkspaceShell({
     <div className="min-h-svh bg-[#f6f4f0] text-foreground">
       <a href="#workspace-main" className="sr-only rounded-lg bg-primary px-4 py-2 text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50">ข้ามไปยังเนื้อหา</a>
       <WorkspaceSidebar
-        avatarUrl={avatarUrl}
         activeItem={activeItem}
-        personName={personName}
-        role={role}
         systemRole={systemRole}
         isManager={isManager}
         projectCount={projectCount}

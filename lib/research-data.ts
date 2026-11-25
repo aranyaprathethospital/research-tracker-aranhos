@@ -1,5 +1,6 @@
 import "server-only";
 import { profileFileHref } from "@/lib/storage";
+import { formatResearchHistory } from "@/lib/research-history";
 import { progressFromStage, type Research, type ReviewStatus } from "@/lib/research-types";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -40,7 +41,6 @@ export function toResearchItem(project: ProjectWithDetails, advisorId?: string):
     })),
     student: project.advisee.fullName,
     studentAvatarUrl: profileFileHref(project.adviseeId, "avatar", project.advisee.avatarPath),
-    faculty: project.faculty ?? "",
     advisor: project.advisors.map((entry) => entry.advisor.fullName),
     primaryAdvisor: primaryName,
     secondaryAdvisors: secondary.map((entry) => entry.advisor.fullName),
@@ -55,7 +55,7 @@ export function toResearchItem(project: ProjectWithDetails, advisorId?: string):
     notes: project.notes,
     review: (primaryReview?.status ?? defaultReview) as ReviewStatus,
     updatedAt: project.updatedAt.toISOString(),
-    history: project.updates.map((entry) => ({ text: entry.summary, date: entry.createdAt.toISOString(), by: entry.actor.fullName })),
+    history: project.updates.map((entry) => ({ text: formatResearchHistory(entry.summary), date: entry.createdAt.toISOString(), by: entry.actor.fullName })),
     comments: project.comments.map((entry) => ({ text: entry.body, date: entry.createdAt.toISOString(), by: entry.author.fullName })),
   };
 }

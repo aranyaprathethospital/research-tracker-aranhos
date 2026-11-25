@@ -10,8 +10,11 @@ export async function PATCH(request: Request) {
 
   const body = await request.json().catch(() => null);
   const title = typeof body?.title === "string" ? body.title.trim() : "";
-  const { id, expectedVersion } = body ?? {};
-  if (typeof id !== "string" || !title || !Number.isSafeInteger(expectedVersion) || expectedVersion < 1) {
+  const { id, expectedVersion, expectedTitle, action = "advance" } = body ?? {};
+  if (typeof id !== "string" || !title || !Number.isSafeInteger(expectedVersion) || expectedVersion < 1
+    || (action !== "advance" && action !== "edit")
+    || (expectedTitle !== undefined && typeof expectedTitle !== "string")
+    || (action === "edit" && typeof expectedTitle !== "string")) {
     return NextResponse.json({ error: "กรุณากรอกชื่อเรื่องและตรวจสอบรอบปัจจุบัน" }, { status: 400 });
   }
 
@@ -25,17 +28,21 @@ export async function PATCH(request: Request) {
   const result = await prisma.$transaction(async (tx) => {
     const current = await tx.researchProject.findFirst({ where: scope, include: projectInclude() });
     if (!current) return { status: 404 } as const;
-    if (current.titleVersion !== expectedVersion) return { status: 409, project: current } as const;
+    if (current.titleVersion !== expectedVersion || (expectedTitle !== undefined && current.title !== expectedTitle)) {
+      return { status: 409, project: current } as const;
+    }
     if (!canEditResearchTitle({
       systemRole: profile.systemRole,
       isOwnerInAdviseeMode: activeMode === "ADVISEE" && current.adviseeId === profile.id,
       version: current.titleVersion,
     })) return { status: 403 } as const;
-    if (current.titleVersion >= 3 && title === current.title) return { status: 200, project: current } as const;
+    if ((action === "edit" || current.titleVersion >= 3) && title === current.title) {
+      return { status: 200, project: current } as const;
+    }
 
-    const nextVersion = expectedVersion + 1;
+    const nextVersion = action === "edit" ? expectedVersion : expectedVersion + 1;
     const updated = await tx.researchProject.updateMany({
-      where: { ...scope, titleVersion: expectedVersion },
+      where: { ...scope, titleVersion: expectedVersion, title: current.title },
       data: { title, titleVersion: nextVersion },
     });
     if (!updated.count) {
@@ -43,9 +50,16 @@ export async function PATCH(request: Request) {
       return latest ? { status: 409, project: latest } as const : { status: 404 } as const;
     }
 
-    await tx.researchTitleVersion.create({
-      data: { projectId: id, version: nextVersion, title, author: profile.fullName, createdAt: new Date() },
-    });
+    const versionData = { projectId: id, version: nextVersion, title, author: profile.fullName, createdAt: new Date() };
+    if (action === "edit") {
+      await tx.researchTitleVersion.upsert({
+        where: { projectId_version: { projectId: id, version: nextVersion } },
+        create: versionData,
+        update: { title },
+      });
+    } else {
+      await tx.researchTitleVersion.create({ data: versionData });
+    }
     const project = await tx.researchProject.findUniqueOrThrow({ where: { id }, include: projectInclude() });
     return { status: 200, project } as const;
   });

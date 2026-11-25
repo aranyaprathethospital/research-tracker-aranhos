@@ -12,7 +12,7 @@ import { getCoreRowModel, getPaginationRowModel, useLegacyTable, type LegacyColu
 import { Plus, Search, Users, X } from "lucide-react";
 import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { toast } from "sonner";
-import { inputClass } from "./user-directory-fields";
+import { capabilityNames, inputClass, systemRoleNames } from "./user-directory-fields";
 import { type UserFormValues, type EditorMode } from "./user-form-schema";
 import { UserEditorDialog } from "./user-editor-dialog";
 import { CidEditorDialog } from "./user-cid-dialog";
@@ -25,12 +25,12 @@ type RoleFilter = "ALL" | "USER" | "PM" | "SUPERADMIN" | "ADVISEE" | "ADVISOR";
 
 const statusLabels: Record<StatusFilter, string> = { ALL: "ทุกสถานะ", ACTIVE: "เปิดใช้งาน", PENDING: "รอเชื่อมบัญชี", INACTIVE: "ปิดใช้งาน" };
 const roleOptions: { value: RoleFilter; label: string }[] = [
-  { value: "ALL", label: "ทุกบทบาท" },
-  { value: "USER", label: "ผู้ใช้ทั่วไป" },
-  { value: "PM", label: "PM" },
-  { value: "SUPERADMIN", label: "Superadmin" },
-  { value: "ADVISEE", label: "นักวิจัย" },
-  { value: "ADVISOR", label: "ที่ปรึกษา" },
+  { value: "ALL", label: "All roles" },
+  { value: "USER", label: systemRoleNames.USER },
+  { value: "PM", label: systemRoleNames.PM },
+  { value: "SUPERADMIN", label: systemRoleNames.SUPERADMIN },
+  { value: "ADVISEE", label: capabilityNames.ADVISEE },
+  { value: "ADVISOR", label: capabilityNames.ADVISOR },
 ];
 
 type UserDirectoryProps = {
@@ -255,8 +255,8 @@ export default function UserDirectory({
                 onChange={setStatusFilter} />
             </div>
             <div className="min-w-0">
-              <p className="mb-2 text-sm font-bold">บทบาท</p>
-              <SelectField label="กรองบทบาทผู้ใช้" value={roleFilter} options={roleOptions} onChange={setRoleFilter} />
+              <p className="mb-2 text-sm font-bold">Role</p>
+              <SelectField label="Filter by role" value={roleFilter} options={roleOptions} onChange={setRoleFilter} />
             </div>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#f0edf3] pt-3">
