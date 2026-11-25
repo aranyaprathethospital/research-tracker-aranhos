@@ -28,11 +28,11 @@ const providerPlugin = providerEnabled ? genericOAuth({
     redirectURI: moph.redirectUri,
     responseType: "code",
     pkce: false,
-    getToken: async ({ code, redirectURI }) => {
+    getToken: async ({ code }) => {
       const body = new URLSearchParams({
         grant_type: "authorization_code",
         code,
-        redirect_uri: redirectURI,
+        redirect_uri: moph.redirectUri,
         client_id: moph.healthClientId!,
         client_secret: moph.healthClientSecret!,
       });
@@ -42,7 +42,10 @@ const providerPlugin = providerEnabled ? genericOAuth({
       const payload = await response.json().catch(() => null);
       const data = nestedData(payload);
       const accessToken = data.access_token;
-      if (!response.ok || typeof accessToken !== "string" || !accessToken) throw new Error("Health ID code exchange failed");
+      if (!response.ok || typeof accessToken !== "string" || !accessToken) {
+        console.warn("[ProviderID] Health ID token exchange failed", { status: response.status });
+        throw new Error("Health ID code exchange failed");
+      }
       const expiresIn = typeof data.expires_in === "number" ? data.expires_in : 3600;
       return { accessToken, tokenType: typeof data.token_type === "string" ? data.token_type : "Bearer", accessTokenExpiresAt: new Date(Date.now() + expiresIn * 1000), scopes: [], raw: { healthIdAccessToken: accessToken } };
     },
@@ -56,7 +59,10 @@ const providerPlugin = providerEnabled ? genericOAuth({
       });
       const providerPayload = await providerTokenResponse.json().catch(() => null);
       const providerToken = nestedData(providerPayload).access_token;
-      if (!providerTokenResponse.ok || typeof providerToken !== "string" || !providerToken) return null;
+      if (!providerTokenResponse.ok || typeof providerToken !== "string" || !providerToken) {
+        console.warn("[ProviderID] Provider token exchange failed", { status: providerTokenResponse.status });
+        return null;
+      }
       const profileResponse = await fetch(`${moph.providerBaseUrl}/api/v1/services/profile`, {
         method: "GET", headers: {
           Authorization: `Bearer ${providerToken}`,
@@ -69,7 +75,10 @@ const providerPlugin = providerEnabled ? genericOAuth({
       const profile = nestedData(profilePayload);
       const providerId = profile.provider_id;
       const cidLookupKey = cidLookupKeyFromMophHash(profile.hash_cid);
-      if (!profileResponse.ok || typeof providerId !== "string" || !providerId || !cidLookupKey) return null;
+      if (!profileResponse.ok || typeof providerId !== "string" || !providerId || !cidLookupKey) {
+        console.warn("[ProviderID] Provider profile response unusable", { status: profileResponse.status });
+        return null;
+      }
 
       // A directory record with this CID must exist before login. Never create
       // or assign a role during OAuth; the role comes only from the database.
@@ -77,10 +86,16 @@ const providerPlugin = providerEnabled ? genericOAuth({
         where: { cidLookupKey },
         select: { id: true, providerId: true, emailAlias: true, active: true, fullName: true },
       });
-      if (!existing?.active) return null;
+      if (!existing?.active) {
+        console.warn("[ProviderID] Active CID registration not found");
+        return null;
+      }
 
       const conflictingProviderId = await prisma.researchProfile.findUnique({ where: { providerId }, select: { id: true } });
-      if (conflictingProviderId && conflictingProviderId.id !== existing.id) return null;
+      if (conflictingProviderId && conflictingProviderId.id !== existing.id) {
+        console.warn("[ProviderID] Provider account already linked to another profile");
+        return null;
+      }
       if (existing.providerId !== providerId) {
         await prisma.researchProfile.update({ where: { id: existing.id }, data: { providerId } });
       }
