@@ -1,6 +1,5 @@
 import Dashboard from "@/features/research/components/dashboard";
 import { prisma } from "@/lib/prisma";
-import { isProviderIdConfigured } from "@/lib/provider-id";
 import { projectInclude, toResearchItem } from "@/lib/research-data";
 import { profileFileHref } from "@/lib/storage";
 import { progressFromStage } from "@/lib/research-types";
@@ -14,7 +13,6 @@ import type { ProjectFilter } from "@/features/research/project-filter";
 export default async function ResearchWorkspace({ view, stage, filter, projectId, focusReview }: {
   view: WorkspaceView; stage?: string; filter?: ProjectFilter; projectId?: string; focusReview?: boolean;
 }) {
-  if (!isProviderIdConfigured()) redirect("/login?setup=1");
   const authContext = await getSignedInProfile();
   if (!authContext) redirect("/login");
   const { profile, activeMode, session } = authContext;

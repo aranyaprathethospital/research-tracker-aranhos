@@ -3,7 +3,6 @@ import StatusPanel, { StatusLink } from "@/components/status/status-panel";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
-import { isProviderIdConfigured } from "@/lib/provider-id";
 import { canManageUsers } from "@/lib/roles";
 import { getSignedInProfile } from "@/lib/server-access";
 import { profileFileHref } from "@/lib/storage";
@@ -22,7 +21,6 @@ export default function UsersPage() {
 }
 
 async function UsersPageContent() {
-  if (!isProviderIdConfigured()) redirect("/login?setup=1");
 
   const context = await getSignedInProfile();
   if (!context) redirect("/login");

@@ -1,8 +1,18 @@
 import { ShieldCheck } from "lucide-react";
+import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { isProviderIdConfigured } from "@/lib/provider-id";
+import { getSignedInProfile } from "@/lib/server-access";
 import ProviderLogin from "@/features/auth/components/provider-login";
+import Loading from "./loading";
 
 export default function LoginPage() {
+  return <Suspense fallback={<Loading />}><LoginContent /></Suspense>;
+}
+
+async function LoginContent() {
+  if (await getSignedInProfile()) redirect("/");
+
   return (
     <main aria-labelledby="login-title">
       <h1 id="login-title" className="text-5xl font-bold leading-none tracking-tight text-[#30203e] sm:text-6xl">เข้าสู่ระบบ</h1>
