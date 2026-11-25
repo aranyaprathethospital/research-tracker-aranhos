@@ -1,3 +1,4 @@
+import { workspaceFetch } from "@/lib/workspace-fetch";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +35,7 @@ export default function ProjectTitleHistory({ item, canEdit, onUpdate }: {
     setBusy(true);
     setError("");
     try {
-      const response = await fetch("/api/projects/title", {
+      const response = await workspaceFetch("/api/projects/title", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: item.id, expectedVersion: item.titleVersion, title }),

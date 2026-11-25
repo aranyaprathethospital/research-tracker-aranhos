@@ -1,11 +1,12 @@
 import Loading from "./loading";
+import StatusPanel, { StatusLink } from "@/components/status/status-panel";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { isProviderIdConfigured } from "@/lib/provider-id";
 import { canManageUsers } from "@/lib/roles";
 import { getSignedInProfile } from "@/lib/server-access";
-import { createProfileFileUrl } from "@/lib/storage";
+import { profileFileHref } from "@/lib/storage";
 import UserManagementPage from "@/features/users/components/user-management-page";
 import type { UserDirectoryPerson } from "@/features/users/types";
 import type { Role } from "@/lib/research-types";
@@ -33,7 +34,12 @@ async function UsersPageContent() {
   });
   if (!credential) redirect("/account/setup");
   if (profile.mustChangePassword) redirect("/account/password");
-  if (!canManageUsers(profile.systemRole)) redirect("/");
+  if (!canManageUsers(profile.systemRole)) {
+    return <StatusPanel kind="forbidden" title="ไม่มีสิทธิ์จัดการผู้ใช้"
+      description="บัญชีที่มีบทบาท PM หรือ Superadmin เท่านั้นที่เปิดหน้าจัดการผู้ใช้ได้">
+      <StatusLink href="/">กลับ Workspace</StatusLink>
+    </StatusPanel>;
+  }
 
   const availableModes = profile.capabilities.map((grant) => grant.capability);
   if (availableModes.length > 1 && !activeMode) redirect("/choose-role");
@@ -47,12 +53,7 @@ async function UsersPageContent() {
     prisma.advisorComment.count(),
   ]);
 
-  const people: UserDirectoryPerson[] = await Promise.all(records.map(async (person) => {
-    const [avatarUrl, signatureUrl] = await Promise.all([
-      person.avatarPath ? createProfileFileUrl(person.avatarPath).catch(() => null) : null,
-      person.signaturePath ? createProfileFileUrl(person.signaturePath).catch(() => null) : null,
-    ]);
-    return {
+  const people: UserDirectoryPerson[] = records.map((person) => ({
       id: person.id,
       name: person.fullName,
       fullName: person.fullName,
@@ -67,9 +68,8 @@ async function UsersPageContent() {
       cidRegistered: Boolean(person.cidLookupKey),
       userId: person.userId,
       active: person.active,
-      avatarUrl,
-      signatureUrl,
-    };
+      avatarUrl: profileFileHref(person.id, "avatar", person.avatarPath),
+      signatureUrl: profileFileHref(person.id, "signature", person.signaturePath),
   }));
 
   const role: Role = activeMode === "ADVISOR"
@@ -84,6 +84,7 @@ async function UsersPageContent() {
     <UserManagementPage
       initialPeople={people}
       personName={profile.fullName}
+      avatarUrl={profileFileHref(profile.id, "avatar", profile.avatarPath)}
       currentProfileId={profile.id}
       systemRole={profile.systemRole}
       role={role}

@@ -1,4 +1,5 @@
 import "server-only";
+import { env } from "@/lib/env";
 import { createHash, createHmac } from "node:crypto";
 
 export function providerEmailAlias(providerId: string) {
@@ -15,7 +16,7 @@ export function normalizeThaiCid(value: string) {
 }
 
 function cidLookupSecret() {
-  const secret = process.env.BETTER_AUTH_SECRET;
+  const secret = env.BETTER_AUTH_SECRET;
   if (!secret || secret.length < 32) throw new Error("BETTER_AUTH_SECRET must be configured to look up CID records");
   return secret;
 }
@@ -36,22 +37,22 @@ export function cidLookupKeyFromMophHash(value: unknown) {
 }
 
 export function providerIdConfig() {
-  const environment = process.env.MOPH_ENV === "PRD" ? "PRD" : "UAT";
+  const environment = env.MOPH_ENV === "PRD" ? "PRD" : "UAT";
   const healthBaseUrl = environment === "PRD" ? "https://moph.id.th" : "https://uat-moph.id.th";
   const providerBaseUrl = environment === "PRD" ? "https://provider.id.th" : "https://uat-provider.id.th";
   return {
     environment,
     healthBaseUrl,
     providerBaseUrl,
-    healthClientId: process.env.MOPH_HEALTH_ID_CLIENT_ID,
-    healthClientSecret: process.env.MOPH_HEALTH_ID_CLIENT_SECRET,
-    providerClientId: process.env.MOPH_PROVIDER_ID_CLIENT_ID,
-    providerSecret: process.env.MOPH_PROVIDER_ID_SECRET_KEY,
-    redirectUri: process.env.MOPH_REDIRECT_URI ?? `${process.env.BETTER_AUTH_URL ?? "http://localhost:3000"}/api/auth/callback/provider-id`,
+    healthClientId: env.MOPH_HEALTH_ID_CLIENT_ID,
+    healthClientSecret: env.MOPH_HEALTH_ID_CLIENT_SECRET,
+    providerClientId: env.MOPH_PROVIDER_ID_CLIENT_ID,
+    providerSecret: env.MOPH_PROVIDER_ID_SECRET_KEY,
+    redirectUri: env.MOPH_REDIRECT_URI ?? `${env.BETTER_AUTH_URL}/api/auth/callback/provider-id`,
   };
 }
 
 export function isProviderIdConfigured() {
   const config = providerIdConfig();
-  return Boolean(process.env.DATABASE_URL && process.env.BETTER_AUTH_SECRET && config.healthClientId && config.healthClientSecret && config.providerClientId && config.providerSecret);
+  return Boolean(env.DATABASE_URL && env.BETTER_AUTH_SECRET && config.healthClientId && config.healthClientSecret && config.providerClientId && config.providerSecret);
 }

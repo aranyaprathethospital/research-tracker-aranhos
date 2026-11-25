@@ -106,6 +106,7 @@ model ResearchProfile {
   reviews         AdvisorReview[]
   comments        AdvisorComment[]
   updates         ResearchUpdate[]       @relation("UpdateActor")
+  notifications   ResearchNotification[]
   createdAt       DateTime               @default(now())
   updatedAt       DateTime               @updatedAt
 }
@@ -127,6 +128,7 @@ model ResearchProject {
   title       String
   titleVersion Int     @default(1)
   titleHistory ResearchTitleVersion[]
+  notifications ResearchNotification[]
   faculty     String?
   stage       Int      @default(0)
   stageProgress Int    @default(0)
@@ -147,6 +149,22 @@ model ResearchProject {
   @@index([stage])
   @@index([dueDate])
   @@index([updatedAt])
+}
+
+model ResearchNotification {
+  id          String @id @default(cuid())
+  recipientId String
+  projectId   String?
+  kind        String
+  message     String
+  projectTitle String
+  createdAt   DateTime @default(now())
+  readAt      DateTime?
+  recipient   ResearchProfile @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  project     ResearchProject? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([recipientId, createdAt, id])
+  @@index([recipientId, readAt])
 }
 
 model ResearchTitleVersion {

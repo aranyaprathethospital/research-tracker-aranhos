@@ -1,20 +1,28 @@
 import { useState } from "react";
-import { Check, MessageCircle } from "lucide-react";
+import { Check, Clock3, FileDown, MessageCircle } from "lucide-react";
+import Link from "next/link";
 import { canEditResearchTitle, progressFromStage, titleRoundLabel, stages, type Research, type ReviewStatus, type Role } from "@/lib/research-types";
 import ProjectTitleHistory from "./project-title-history";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+import SecondaryAdvisorPicker from "./secondary-advisor-picker";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type { UserDirectoryPerson } from "@/features/users/types";
+import type { ResearchPersonOption } from "@/features/users/types";
 import { reviewLabels, reviews, formatThaiDate, ReviewBadge, Progress } from "./project-display";
+
+const commentTimestamp = new Intl.DateTimeFormat("th-TH-u-ca-buddhist", {
+  dateStyle: "medium",
+  timeStyle: "short",
+  timeZone: "Asia/Bangkok",
+  hourCycle: "h23",
+});
 import { fieldClass, textareaClass, Field } from "./project-fields";
 import { type ResearchChanges } from "./project-dialog-types";
 
-export function ProjectDialog({ item, role, systemRole, person, currentProfileId, onTitleUpdate, people, onClose, onSave }: { item: Research | null; role: Role; systemRole: string; person: string; currentProfileId: string; onTitleUpdate: (project: Research) => void; people: UserDirectoryPerson[]; onClose: () => void; onSave: (id: string, updates: ResearchChanges, description: string) => void }) {
+export function ProjectDialog({ item, focusReview, role, systemRole, person, currentProfileId, onTitleUpdate, people, onClose, onSave }: { focusReview?: boolean; item: Research | null; role: Role; systemRole: string; person: string; currentProfileId: string; onTitleUpdate: (project: Research) => void; people: ResearchPersonOption[]; onClose: () => void; onSave: (id: string, updates: ResearchChanges, description: string) => void }) {
   const [stage, setStage] = useState(item?.stage ?? 0);
   const progress = progressFromStage(stage);
   const [issue, setIssue] = useState(item?.issue ?? "");
@@ -88,7 +96,11 @@ export function ProjectDialog({ item, role, systemRole, person, currentProfileId
               <Field label="กำหนดส่ง" className="sm:col-span-2"><Input type="date" value={dueDate} disabled={!mayEdit} onChange={(event) => setDueDate(event.target.value)} className={`${fieldClass} disabled:bg-[#f5f3f7]`} /></Field>
               {mayAssignAdvisors && <>
                 <Field label="อาจารย์ที่ปรึกษาหลัก" className="sm:col-span-2"><select value={primaryAdvisorId} onChange={(event) => { setPrimaryAdvisorId(event.target.value); setSecondaryAdvisorIds((current) => current.filter((id) => id !== event.target.value)); }} className="h-11 w-full rounded-xl border border-[#e7e1eb] bg-white px-3 text-base outline-none">{advisorOptions.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}</select></Field>
-                <fieldset className="rounded-2xl border border-[#ece7f0] p-3 sm:col-span-2"><legend className="px-1 text-sm font-semibold text-[#50445b]">ที่ปรึกษารอง</legend><div className="grid gap-2 sm:grid-cols-2">{advisorOptions.filter((entry) => entry.id !== primaryAdvisorId).map((entry) => <label key={entry.id} className="flex min-h-10 items-center gap-3 rounded-xl bg-[#faf9fb] px-3 text-sm text-[#51465b]"><Checkbox checked={secondaryAdvisorIds.includes(entry.id)} onCheckedChange={(checked) => setSecondaryAdvisorIds((current) => checked ? [...current, entry.id] : current.filter((id) => id !== entry.id))} className="size-5 data-checked:border-[#6d4a8b] data-checked:bg-[#6d4a8b]" />{entry.name}</label>)}</div></fieldset>
+                <SecondaryAdvisorPicker
+                  options={advisorOptions.filter((entry) => entry.id !== primaryAdvisorId)}
+                  selectedIds={secondaryAdvisorIds}
+                  onChange={setSecondaryAdvisorIds}
+                />
               </>}
               <Field label="ปัญหาหรือสิ่งที่ติดขัด" className="sm:col-span-2"><Textarea rows={3} value={issue} disabled={!mayEdit} onChange={(event) => setIssue(event.target.value)} className={`${textareaClass} disabled:bg-[#f5f3f7]`} /></Field>
               <Field label="ผลการดำเนินงานปัจจุบัน" className="sm:col-span-2"><Textarea rows={2} value={nextTask} disabled={!mayEdit} onChange={(event) => setNextTask(event.target.value)} className={`${textareaClass} disabled:bg-[#f5f3f7]`} /></Field>
@@ -97,11 +109,54 @@ export function ProjectDialog({ item, role, systemRole, person, currentProfileId
             <div className="space-y-4">
               <Card className="rounded-2xl border-[#eeeaf2] bg-[#fcfbfd] shadow-none"><CardContent className="p-4"><div className="flex items-center gap-2 text-sm font-semibold text-[#51445d]"><MessageCircle className="size-4 text-[#765196]" />ผลประเมินที่ปรึกษา</div><div className="mt-3 space-y-2">{(item.advisorReviews ?? []).map((entry) => <div key={entry.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white p-3"><span className="min-w-0"><span className="block wrap-break-word text-sm font-medium text-[#4e4358]">{entry.advisor}</span><span className="mt-0.5 block text-sm text-[#8b8292]">{entry.assignment === "PRIMARY" ? "อาจารย์หลัก" : "อาจารย์รอง"}</span></span><ReviewBadge status={entry.status} /></div>)}{(item.advisorReviews ?? []).length === 0 && <div className="text-sm text-[#8b8292]">ยังไม่มีผลประเมิน</div>}</div></CardContent></Card>
               {maySetReview && <Field label="สถานะการตรวจของ Advisor"><select value={review} onChange={(event) => setReview(event.target.value as ReviewStatus)} className="h-11 w-full rounded-xl border border-[#e7e1eb] bg-white px-3 text-base outline-none disabled:bg-[#f5f3f7]">{reviews.map((value) => <option key={value} value={value}>{reviewLabels[value]}</option>)}</select></Field>}
-              <div className="rounded-2xl border border-[#eeeaf2] p-4"><h3 className="text-sm font-semibold text-[#4d4157]">ความเห็นล่าสุด</h3><div className="mt-3 space-y-3">{item.comments.map((entry, index) => <div key={`${entry.date}-${index}`} className="rounded-xl bg-[#faf9fb] p-3"><div className="flex flex-wrap items-center justify-between gap-1"><span className="text-sm font-semibold text-[#554a60]">{entry.by}</span><span className="text-xs text-[#948b9b]">{formatThaiDate(entry.date.slice(0, 10), true)}</span></div><p className="mt-2 text-sm leading-6 text-[#706779]">{entry.text}</p></div>)}{item.comments.length === 0 && <p className="text-sm text-[#8b8292]">ยังไม่มีความเห็น</p>}</div>{maySetReview && <Textarea value={comment} onChange={(event) => setComment(event.target.value)} aria-label="เขียนความเห็นหรือข้อเสนอแนะ" className={`${textareaClass} mt-3`} />}</div>
+              <section
+                ref={focusReview ? (element) => {
+                  if (!element) return;
+                  const frame = requestAnimationFrame(() => element.scrollIntoView({ block: "nearest" }));
+                  return () => cancelAnimationFrame(frame);
+                } : undefined}
+                className="rounded-2xl border border-border bg-white p-4"
+              >
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <MessageCircle aria-hidden className="size-4 text-primary" /> ความเห็นล่าสุด
+                  </h3>
+                  <span className="rounded-full bg-secondary px-2.5 py-1 text-xs tabular-nums text-primary">{item.comments.length} ความเห็น</span>
+                </div>
+                {item.comments.length ? (
+                  <ol className="max-h-72 space-y-2.5 overflow-y-auto overscroll-contain">
+                    {item.comments.map((entry, index) => (
+                      <li key={`${entry.date}-${index}`} className="rounded-xl border border-[#ede6f1] bg-[#faf7fc] p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                          <span className="min-w-0 wrap-break-word text-sm font-semibold text-foreground">{entry.by}</span>
+                          <time dateTime={entry.date} className="inline-flex items-center gap-1.5 text-xs tabular-nums text-muted-foreground">
+                            <Clock3 aria-hidden className="size-3.5" />
+                            {commentTimestamp.format(new Date(entry.date))} น.
+                          </time>
+                        </div>
+                        <p className="mt-2.5 whitespace-pre-wrap wrap-break-word text-sm leading-6 text-[#51465c]">{entry.text}</p>
+                      </li>
+                    ))}
+                  </ol>
+                ) : <p className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">ยังไม่มีความเห็น</p>}
+                {maySetReview && (
+                  <label className="mt-4 block space-y-2 text-sm font-semibold">
+                    <span>เขียนความเห็นหรือข้อเสนอแนะ</span>
+                    <Textarea value={comment} onChange={(event) => setComment(event.target.value)} className={textareaClass} />
+                  </label>
+                )}
+              </section>
             </div>
           </div>}
         </div>
-        <DialogFooter className="shrink-0 flex-row flex-wrap justify-end border-t border-[#eeeaf2] bg-white px-4 py-3 sm:px-7"><Button variant="outline" onClick={onClose} className="h-11 rounded-xl">ปิด</Button>{tab === "รายละเอียด" && <Button onClick={save} className="h-11 rounded-xl"><Check className="size-4" />บันทึกการเปลี่ยนแปลง</Button>}</DialogFooter>
+        <DialogFooter className="shrink-0 flex-row flex-wrap justify-end border-t border-[#eeeaf2] bg-white px-4 py-3 sm:px-7">
+          <Link href={`/projects/${encodeURIComponent(item.id)}/report`} target="_blank" rel="noopener noreferrer"
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 font-semibold text-primary hover:bg-secondary focus-visible:outline-2 focus-visible:outline-primary sm:mr-auto">
+            <FileDown aria-hidden className="size-4" /> Export PDF <span className="sr-only">(เปิดแท็บใหม่)</span>
+          </Link>
+          <Button variant="outline" onClick={onClose} className="h-11 rounded-xl">ปิด</Button>
+          {tab === "รายละเอียด" && <Button onClick={save} className="h-11 rounded-xl"><Check className="size-4" />บันทึกการเปลี่ยนแปลง</Button>}
+        </DialogFooter>
       </div>
     </DialogContent>
   </Dialog>;

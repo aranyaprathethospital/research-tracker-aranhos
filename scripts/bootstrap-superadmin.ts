@@ -1,16 +1,18 @@
 import { createHash, createHmac, randomUUID } from "node:crypto";
 import dotenv from "dotenv";
 import pg from "pg";
+import { readBootstrapEnv } from "../config/env.ts";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config();
 
-const cidInput = process.env.BOOTSTRAP_SUPERADMIN_CID ?? "";
-const fullName = process.env.BOOTSTRAP_SUPERADMIN_NAME?.trim();
-const authSecret = process.env.BETTER_AUTH_SECRET;
-const connectionString = process.env.DIRECT_URL;
+const env = readBootstrapEnv();
+const cidInput = env.BOOTSTRAP_SUPERADMIN_CID;
+const fullName = env.BOOTSTRAP_SUPERADMIN_NAME;
+const authSecret = env.BETTER_AUTH_SECRET;
+const connectionString = env.DIRECT_URL;
 
-function normalizeCid(value) {
+function normalizeCid(value: string) {
   const cid = value.replace(/[\s-]/g, "");
   if (!/^\d{13}$/.test(cid)) return null;
   const sum = [...cid.slice(0, 12)].reduce((total, digit, index) => total + Number(digit) * (13 - index), 0);
@@ -19,9 +21,6 @@ function normalizeCid(value) {
 
 const cid = normalizeCid(cidInput);
 if (!cid) throw new Error("BOOTSTRAP_SUPERADMIN_CID must be a valid 13-digit Thai CID");
-if (!fullName) throw new Error("BOOTSTRAP_SUPERADMIN_NAME is required");
-if (!authSecret || authSecret.length < 32) throw new Error("Set BETTER_AUTH_SECRET to a stable random value of at least 32 characters");
-if (!connectionString) throw new Error("DIRECT_URL is required");
 
 const mophHashCid = createHash("sha256").update(cid).digest("hex");
 const cidLookupKey = createHmac("sha256", authSecret).update(mophHashCid).digest("hex");
@@ -37,7 +36,7 @@ try {
   if (existingAdmins.rows[0].count > 0) throw new Error("An active Superadmin already exists; use the Superadmin directory instead");
 
   const existingProfile = await client.query(`SELECT "id" FROM public."ResearchProfile" WHERE "cidLookupKey" = $1 FOR UPDATE`, [cidLookupKey]);
-  if (existingProfile.rowCount) {
+  if (existingProfile.rows.length) {
     await client.query(
       `UPDATE public."ResearchProfile" SET "fullName" = $2, "systemRole" = 'SUPERADMIN', "active" = true, "updatedAt" = now() WHERE "id" = $1`,
       [existingProfile.rows[0].id, fullName],
@@ -56,6 +55,4 @@ try {
   throw error;
 } finally {
   await client.end().catch(() => {});
-  delete process.env.BOOTSTRAP_SUPERADMIN_CID;
-  delete process.env.BOOTSTRAP_SUPERADMIN_NAME;
 }

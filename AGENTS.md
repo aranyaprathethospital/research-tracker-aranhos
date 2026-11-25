@@ -49,6 +49,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Database and environment changes
 
+- Read application environment variables through `@/lib/env`. Prisma CLI and operational scripts use their validated readers from `config/env.ts`. Add new variables to the appropriate schema and runtime mapping there. Direct `process.env` access belongs only in that file.
+
 - Keep `.env.example` aligned with actual environment-variable names and safe placeholder values. Never read, print, or commit a user's real `.env` values while documenting or debugging.
 - `DATABASE_URL` is the runtime PostgreSQL URL (the example uses Supabase transaction pooler port `6543`). `DIRECT_URL` is used by Prisma migrations and the bootstrap script (the example uses Supabase session pooler port `5432`). Preserve both roles when updating database setup.
 - Change the Prisma schema first, then create a new Prisma migration using the repository's `db:migrate:dev` workflow in development. Do not edit a migration that may already have been applied; add a forward migration instead. Deploy committed migrations with `pnpm db:migrate`.

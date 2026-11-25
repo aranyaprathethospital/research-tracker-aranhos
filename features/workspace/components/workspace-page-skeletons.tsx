@@ -20,6 +20,20 @@ function ListSkeleton() {
   );
 }
 
+export function ProjectListLoading() {
+  return <WorkspaceLoading label="กำลังโหลดรายการงานวิจัย"><ListSkeleton /></WorkspaceLoading>;
+}
+
+export function TeamLoading() {
+  return (
+    <WorkspaceLoading label="กำลังโหลดทีมวิจัย">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {[0, 1, 2].map((index) => <Placeholder key={index} className="h-40 rounded-2xl" />)}
+      </div>
+    </WorkspaceLoading>
+  );
+}
+
 export function DashboardLoading() {
   return (
     <WorkspaceLoading label="กำลังโหลดภาพรวมงานวิจัย">

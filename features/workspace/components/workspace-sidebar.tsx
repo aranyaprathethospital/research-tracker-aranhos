@@ -2,14 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import {
   BookOpenCheck,
   ChevronDown,
   FlaskConical,
   LayoutDashboard,
   MessageSquareText,
-  PanelLeftClose,
-  PanelLeftOpen,
+  Circle,
+  CircleDot,
   UserRound,
   UserRoundCog,
   UsersRound,
@@ -24,6 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Role } from "@/lib/research-types";
 
 type SidebarItem = {
@@ -31,11 +33,13 @@ type SidebarItem = {
   icon: LucideIcon;
   section: "workspace" | "management";
   managerOnly?: boolean;
+  pmOnly?: boolean;
 };
 
 export type WorkspaceSidebarProps = {
   activeItem: string;
   personName: string;
+  avatarUrl?: string | null;
   role: Role;
   systemRole: string;
   availableRoles: Role[];
@@ -56,16 +60,42 @@ const items: SidebarItem[] = [
   { label: "ความเห็น", icon: MessageSquareText, section: "workspace" },
   { label: "ทีม", icon: UsersRound, section: "workspace" },
   { label: "จัดการผู้ใช้", icon: UserRoundCog, section: "management", managerOnly: true },
+  { label: "สรุปที่ปรึกษาหลัก", icon: UsersRound, section: "management", managerOnly: true, pmOnly: true },
 ];
 
 export default function WorkspaceSidebar(props: WorkspaceSidebarProps) {
-  const visibleItems = items.filter((item) => !item.managerOnly || props.isManager);
+  const [preview, setPreview] = useState(false);
+  const expanded = !props.collapsed || preview;
+  const visibleItems = items.filter((item) => (!item.managerOnly || props.isManager) && (!item.pmOnly || props.systemRole === "PM"));
   const mobileItems = visibleItems.filter((item) => !item.managerOnly);
 
   return (
     <>
-      <aside className={`fixed inset-y-0 left-0 z-40 hidden border-r border-[#e9e7ed] bg-white transition-[width] duration-200 lg:flex ${props.collapsed ? "w-[76px]" : "w-[256px]"}`}>
-        <SidebarPanel {...props} items={visibleItems} />
+      <aside
+        onPointerEnter={(event) => {
+          if (event.pointerType === "mouse" && props.collapsed) setPreview(true);
+        }}
+        onPointerLeave={() => setPreview(false)}
+        onFocusCapture={(event) => {
+          if (props.collapsed && event.target.matches(":focus-visible")) setPreview(true);
+        }}
+        onBlurCapture={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) setPreview(false);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Escape" && preview) setPreview(false);
+        }}
+        className={`fixed inset-y-0 left-0 z-40 hidden overflow-hidden border-r border-[#e9e1ee] bg-white motion-safe:transition-[width,box-shadow] motion-safe:duration-200 lg:flex ${expanded ? "w-[272px]" : "w-[88px]"} ${props.collapsed && preview ? "shadow-[16px_0_48px_-18px_rgba(50,28,68,.3)]" : ""}`}
+      >
+        <SidebarPanel
+          {...props}
+          compact={!expanded}
+          items={visibleItems}
+          onCollapsedChange={(collapsed) => {
+            setPreview(false);
+            props.onCollapsedChange(collapsed);
+          }}
+        />
       </aside>
 
       <Dialog open={props.mobileOpen} onOpenChange={props.onMobileOpenChange}>
@@ -108,11 +138,13 @@ type SidebarPanelProps = Omit<WorkspaceSidebarProps, "commentCount"> & {
   items: SidebarItem[];
   commentCount: number;
   mobile?: boolean;
+  compact?: boolean;
 };
 
 function SidebarPanel({
   activeItem,
   personName,
+  avatarUrl,
   role,
   systemRole,
   availableRoles,
@@ -123,11 +155,12 @@ function SidebarPanel({
   items: menuItems,
   commentCount,
   mobile = false,
+  compact = false,
   onMobileOpenChange,
   onNavigate,
   onModeChange,
 }: SidebarPanelProps) {
-  const isCollapsed = !mobile && collapsed;
+  const isCollapsed = !mobile && compact;
   const workspaceItems = menuItems.filter((item) => item.section === "workspace");
   const managementItems = menuItems.filter((item) => item.section === "management");
   const currentRole = roleLabel(role, systemRole);
@@ -137,25 +170,37 @@ function SidebarPanel({
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className={`flex min-h-[76px] items-center border-b border-[#efedf2] ${isCollapsed ? "justify-center px-2" : "justify-between gap-2 px-5 pr-14 lg:pr-4"}`}>
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-linear-to-b from-[#fcf9fe] via-white to-white">
+      <div className={`flex min-h-[76px] shrink-0 items-center border-b border-[#eee7f1] ${isCollapsed ? "justify-center px-2" : "justify-between gap-2 px-5 pr-14 lg:px-4"}`}>
         <Link href="/" onClick={() => mobile && onMobileOpenChange(false)} className="inline-flex min-w-0 items-center rounded-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#765196]/15" aria-label="Research Tracker หน้าแรก" title={isCollapsed ? "Research Tracker" : undefined}>
           {isCollapsed ? (
-            <Image src="/images/branding/icon.png" alt="Research Tracker" width={40} height={40} priority className="size-9 object-contain" />
+            <Image src="/images/branding/icon.png" alt="" width={40} height={40} className="size-8 shrink-0 object-contain" />
           ) : (
-            <Image src="/images/branding/logo-horizontal.png.png" alt="Research Tracker" width={434} height={145} priority className="h-auto w-[172px] object-contain" />
+            <Image src="/images/branding/logo-horizontal.png.png" alt="Research Tracker" width={434} height={145} priority className="h-auto w-[158px] object-contain" />
           )}
         </Link>
-        {!mobile && (
-          <button type="button" onClick={() => onCollapsedChange(!collapsed)} aria-label={collapsed ? "ขยายแถบเมนู" : "ย่อแถบเมนู"} title={collapsed ? "ขยายแถบเมนู" : "ย่อแถบเมนู"} className="grid size-9 shrink-0 place-items-center rounded-lg text-[#8b8494] transition hover:bg-[#f5f4f7] hover:text-[#57406d] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#765196]/15">
-            {collapsed ? <PanelLeftOpen className="size-[17px]" /> : <PanelLeftClose className="size-[17px]" />}
+        {!mobile && !isCollapsed && (
+          <button
+            type="button"
+            aria-label="ตรึง Sidebar"
+            aria-pressed={!collapsed}
+            title={collapsed ? "ตรึง Sidebar ให้เปิดค้าง" : "เลิกตรึง Sidebar"}
+            onClick={(event) => {
+              if (!collapsed && event.detail === 0) {
+                event.currentTarget.closest("aside")?.querySelector("a")?.focus();
+              }
+              onCollapsedChange(!collapsed);
+            }}
+            className={`grid size-10 shrink-0 place-items-center rounded-xl transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${collapsed ? "text-muted-foreground hover:bg-secondary hover:text-primary" : "bg-secondary text-primary hover:bg-primary/10"}`}
+          >
+            {collapsed ? <Circle aria-hidden className="size-[18px]" /> : <CircleDot aria-hidden className="size-[18px]" />}
           </button>
         )}
       </div>
 
       <div className={`min-h-0 flex-1 overflow-y-auto py-5 ${isCollapsed ? "px-2" : "px-3"}`}>
         {!isCollapsed ? (
-          <div className="mb-6 flex items-center justify-between rounded-xl bg-[#f8f7fa] px-3 py-2.5">
+          <div className="mb-6 flex items-center justify-between rounded-xl border border-[#eee5f3] bg-[#f8f3fb] px-3 py-2.5">
             <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-[#756d80]"><FlaskConical className="size-4 shrink-0 text-[#765196]" /><span className="truncate">โครงการในมุมมองนี้</span></span>
             <span className="ml-2 text-sm font-semibold tabular-nums text-[#473954]">{projectCount}</span>
           </div>
@@ -184,7 +229,10 @@ function SidebarPanel({
 
       <div className={`border-t border-[#efedf2] bg-white ${isCollapsed ? "p-2" : "p-3"}`}>
         <Link href="/profile" onClick={() => mobile && onMobileOpenChange(false)} aria-label={`โปรไฟล์ของฉัน · ${personName}`} title={isCollapsed ? `โปรไฟล์ · ${personName}` : undefined} className={`group flex min-h-14 items-center gap-3 rounded-xl transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#765196]/15 ${isCollapsed ? "justify-center px-1" : "px-2.5 py-2 hover:bg-[#f7f6f9]"}`}>
-          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-[#f0ebf5] text-xs font-semibold text-[#62417d] ring-1 ring-[#e6dfec]">{initials(personName)}</span>
+          <Avatar aria-hidden className="size-9 ring-1 ring-[#e6dfec]">
+            <AvatarImage src={avatarUrl ?? undefined} alt="" />
+            <AvatarFallback className="bg-[#f0ebf5] text-xs font-semibold text-[#62417d]">{initials(personName)}</AvatarFallback>
+          </Avatar>
           {!isCollapsed && <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-[#44394e]">{personName}</span><span className="mt-0.5 block truncate text-xs text-[#847c8c]">{currentRole}</span></span>}
           {isCollapsed && <span className="sr-only">โปรไฟล์ของฉัน</span>}
           {!isCollapsed && <UserRound className="size-4 shrink-0 text-[#92899a] transition group-hover:text-[#674582]" />}

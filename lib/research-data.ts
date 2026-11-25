@@ -1,10 +1,11 @@
 import "server-only";
+import { profileFileHref } from "@/lib/storage";
 import { progressFromStage, type Research, type ReviewStatus } from "@/lib/research-types";
 import type { Prisma } from "@/generated/prisma/client";
 
 export function projectInclude() {
   return {
-    advisee: { select: { fullName: true } },
+    advisee: { select: { fullName: true, avatarPath: true } },
     titleHistory: { orderBy: { version: "desc" as const } },
     advisors: { include: { advisor: { select: { fullName: true } } }, orderBy: { assignedAt: "asc" as const } },
     reviews: { orderBy: { updatedAt: "desc" as const } },
@@ -38,6 +39,7 @@ export function toResearchItem(project: ProjectWithDetails, advisorId?: string):
       version, title, author, createdAt: createdAt?.toISOString() ?? null,
     })),
     student: project.advisee.fullName,
+    studentAvatarUrl: profileFileHref(project.adviseeId, "avatar", project.advisee.avatarPath),
     faculty: project.faculty ?? "",
     advisor: project.advisors.map((entry) => entry.advisor.fullName),
     primaryAdvisor: primaryName,

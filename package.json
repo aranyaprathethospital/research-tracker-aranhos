@@ -3,23 +3,27 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
   "scripts": {
     "postinstall": "prisma generate",
     "dev": "node --use-system-ca node_modules/next/dist/bin/next dev",
     "build": "next build",
     "start": "node --use-system-ca node_modules/next/dist/bin/next start",
-    "lint": "eslint",
+    "lint": "eslint --flag unstable_native_nodejs_ts_config",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "db:bootstrap-superadmin": "node scripts/bootstrap-superadmin.mjs"
+    "db:bootstrap-superadmin": "node scripts/bootstrap-superadmin.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
     "@hookform/resolvers": "^7.0.8",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
+    "@t3-oss/env-nextjs": "^0.13.11",
     "@tanstack/react-table": "^9.3.1",
     "better-auth": "1.7.26",
     "class-variance-authority": "^0.7.1",

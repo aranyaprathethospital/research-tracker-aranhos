@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { getProfileForRequest } from "@/lib/server-access";
 import { prisma } from "@/lib/prisma";
 import { createProfileFileUrl, profileStorageConfigured } from "@/lib/storage";
@@ -31,17 +32,25 @@ export async function GET(request: Request) {
   });
 }
 
+const profileUpdateSchema = z.object({
+  fullName: z.string().trim().min(1).max(160),
+  position: z.string().trim().max(160).optional(),
+  positionLevel: z.string().trim().max(160).optional(),
+  mission: z.string().trim().max(160).optional(),
+  workGroup: z.string().trim().max(160).optional(),
+});
+
 export async function PATCH(request: Request) {
   const context = await getProfileForRequest(request.headers);
   if (!context) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const body = await request.json().catch(() => null);
-  if (!body || typeof body.fullName !== "string" || !body.fullName.trim() || body.fullName.trim().length > 160) {
-    return NextResponse.json({ error: "Enter a valid full name." }, { status: 400 });
+  const result = profileUpdateSchema.safeParse(await request.json().catch(() => null));
+  if (!result.success) {
+    return NextResponse.json({ error: "กรุณากรอกชื่อเต็ม และให้แต่ละช่องยาวไม่เกิน 160 ตัวอักษร" }, { status: 400 });
   }
 
   await prisma.$transaction([
-    prisma.researchProfile.update({ where: { id: context.profile.id }, data: { fullName: body.fullName.trim() } }),
-    prisma.user.update({ where: { id: context.session.user.id }, data: { name: body.fullName.trim() } }),
+    prisma.researchProfile.update({ where: { id: context.profile.id }, data: result.data }),
+    prisma.user.update({ where: { id: context.session.user.id }, data: { name: result.data.fullName } }),
   ]);
   return NextResponse.json({ ok: true });
 }

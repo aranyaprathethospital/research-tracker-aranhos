@@ -16,6 +16,7 @@ export function progressFromStage(stage: number) {
 export type Role = "Superadmin" | "PM" | "Advisor" | "Advisee";
 export type ReviewStatus = "ยังไม่ส่งตรวจ" | "ส่งตรวจ" | "ขอแก้ไข" | "อนุมัติ";
 export type Research = {
+  studentAvatarUrl?: string | null;
   titleVersion: number;
   adviseeId: string;
   titleHistory: { version: number; title: string; author: string | null; createdAt: string | null }[];

@@ -18,6 +18,7 @@ import type { Role } from "@/lib/research-types";
 type UserManagementPageProps = {
   initialPeople: UserDirectoryPerson[];
   personName: string;
+  avatarUrl: string | null;
   currentProfileId: string;
   systemRole: string;
   role: Role;
@@ -29,6 +30,7 @@ type UserManagementPageProps = {
 export default function UserManagementPage({
   initialPeople,
   personName,
+  avatarUrl,
   currentProfileId,
   systemRole,
   role,
@@ -47,6 +49,7 @@ export default function UserManagementPage({
     <WorkspaceShell
       activeItem="จัดการผู้ใช้"
       personName={personName}
+      avatarUrl={avatarUrl}
       role={role}
       systemRole={systemRole}
       availableRoles={availableRoles}

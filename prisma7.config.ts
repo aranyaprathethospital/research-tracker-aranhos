@@ -1,8 +1,10 @@
 import dotenv from "dotenv";
 import { defineConfig } from "prisma/config";
+import { readPrismaEnv } from "./config/env.ts";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config();
+const env = readPrismaEnv();
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -10,8 +12,8 @@ export default defineConfig({
   datasource: {
     // Use the direct Supabase connection for Prisma CLI migrations.
     url:
-      process.env.DIRECT_URL ??
-      process.env.DATABASE_URL ??
+      env.DIRECT_URL ??
+      env.DATABASE_URL ??
       "postgresql://postgres:postgres@localhost:5432/research_tracker?schema=public",
   },
 });

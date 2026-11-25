@@ -1,11 +1,13 @@
 import { Menu } from "@base-ui/react/menu";
 import { ChevronDown, KeyRound, LogOut, UserRound } from "lucide-react";
 import Link from "next/link";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const itemClass = "flex min-h-11 cursor-pointer select-none items-center gap-3 rounded-lg px-3 text-sm font-medium outline-none data-[highlighted]:bg-[#f2edf6]";
 
-export default function ProfileMenu({ name, role, signingOut, onSignOut }: {
+export default function ProfileMenu({ name, avatarUrl, role, signingOut, onSignOut }: {
   name: string;
+  avatarUrl: string | null;
   role: string;
   signingOut: boolean;
   onSignOut: () => void;
@@ -15,7 +17,10 @@ export default function ProfileMenu({ name, role, signingOut, onSignOut }: {
   return (
     <Menu.Root>
       <Menu.Trigger aria-label={`เมนูบัญชีของ ${name}`} className="group flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-border bg-white p-1.5 pr-2.5 text-left shadow-sm outline-none transition-colors hover:bg-secondary/60 focus-visible:ring-4 focus-visible:ring-ring/20 data-[popup-open]:border-primary/30 data-[popup-open]:bg-secondary/60">
-        <span aria-hidden className="grid size-8 place-items-center rounded-lg bg-primary text-xs font-semibold text-white">{initials}</span>
+        <Avatar aria-hidden className="size-8">
+          <AvatarImage src={avatarUrl ?? undefined} alt="" />
+          <AvatarFallback className="bg-primary text-xs font-semibold text-white">{initials}</AvatarFallback>
+        </Avatar>
         <span className="hidden max-w-40 md:block">
           <span className="block truncate text-sm font-semibold text-foreground">{name}</span>
           <span className="block text-xs text-muted-foreground">{role}</span>
@@ -26,7 +31,10 @@ export default function ProfileMenu({ name, role, signingOut, onSignOut }: {
         <Menu.Positioner align="end" sideOffset={10} collisionPadding={12} className="z-50">
           <Menu.Popup className="w-72 max-w-[calc(100vw-1.5rem)] origin-(--transform-origin) overflow-hidden rounded-2xl border border-border bg-white p-1.5 text-foreground shadow-[0_16px_44px_rgba(47,29,62,.16)] outline-none motion-safe:transition-[opacity,scale] motion-safe:duration-150 motion-safe:data-[starting-style]:scale-95 motion-safe:data-[starting-style]:opacity-0 motion-safe:data-[ending-style]:opacity-0">
             <div className="flex items-center gap-3 rounded-xl bg-[#f5f0f8] p-3">
-              <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-sm font-semibold text-primary ring-1 ring-primary/10">{initials}</span>
+              <Avatar aria-hidden className="size-10 ring-1 ring-primary/10">
+                <AvatarImage src={avatarUrl ?? undefined} alt="" />
+                <AvatarFallback className="bg-white font-semibold text-primary">{initials}</AvatarFallback>
+              </Avatar>
               <div className="min-w-0">
                 <p className="wrap-break-word text-sm font-semibold">{name}</p>
                 <p className="mt-0.5 text-xs font-medium text-primary">{role}</p>

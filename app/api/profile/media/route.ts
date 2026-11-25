@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getProfileForRequest } from "@/lib/server-access";
 import { prisma } from "@/lib/prisma";
-import { uploadProfileFile } from "@/lib/storage";
+import { removeProfileFiles, uploadProfileFile } from "@/lib/storage";
 
 const extensions: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -23,13 +23,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Use a JPG, PNG, or WebP image up to 5 MB." }, { status: 400 });
   }
 
-  const path = `${context.profile.id}/${kind}.${extensions[file.type]}`;
+  const folder = context.profile.id;
+  const path = kind === "avatar" ? `${folder}/avatar` : `${folder}/signature.${extensions[file.type]}`;
   try {
-    await uploadProfileFile(path, await file.arrayBuffer(), file.type);
+    await uploadProfileFile(path, await file.arrayBuffer(), file.type, kind === "avatar" ? 0 : undefined);
     await prisma.researchProfile.update({
       where: { id: context.profile.id },
       data: kind === "avatar" ? { avatarPath: path } : { signaturePath: path },
     });
+    if (kind === "avatar") {
+      // Only remove paths used by the previous avatar naming scheme.
+      const legacyAvatars = Object.values(extensions).map((extension) => `${folder}/avatar.${extension}`);
+      await removeProfileFiles(legacyAvatars).catch((error: unknown) => {
+        console.warn("Could not clean up previous profile pictures.", error);
+      });
+    }
     return NextResponse.json({ ok: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not upload the file.";

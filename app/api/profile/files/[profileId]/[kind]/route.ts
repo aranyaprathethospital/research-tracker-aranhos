@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getProfileForRequest } from "@/lib/server-access";
 import { prisma } from "@/lib/prisma";
 import { createProfileFileUrl } from "@/lib/storage";
+import { canManageUsers } from "@/lib/roles";
 
 type RouteContext = { params: Promise<{ profileId: string; kind: string }> };
 
@@ -15,7 +16,9 @@ export async function GET(request: Request, { params }: RouteContext) {
     where: { id: profileId },
     select: { active: true, avatarPath: true, signaturePath: true },
   });
-  if (!profile?.active) return NextResponse.json({ error: "File not found." }, { status: 404 });
+  if (!profile || (!profile.active && !canManageUsers(context.profile.systemRole))) {
+    return NextResponse.json({ error: "File not found." }, { status: 404 });
+  }
 
   const path = kind === "avatar" ? profile.avatarPath : profile.signaturePath;
   if (!path) return NextResponse.json({ error: "File not found." }, { status: 404 });

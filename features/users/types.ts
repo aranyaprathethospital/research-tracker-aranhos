@@ -16,3 +16,5 @@ export type UserDirectoryPerson = {
   avatarUrl?: string | null;
   signatureUrl?: string | null;
 };
+
+export type ResearchPersonOption = Pick<UserDirectoryPerson, "id" | "name" | "capabilities" | "active">;

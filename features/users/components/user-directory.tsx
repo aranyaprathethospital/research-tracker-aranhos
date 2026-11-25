@@ -1,10 +1,13 @@
 "use client";
 
+import { workspaceFetch } from "@/lib/workspace-fetch";
+import { Table, TableHeader, TableRow, TableHead, TableBody } from "@/components/ui/table";
+import { TablePagination, TABLE_PAGE_SIZE } from "@/components/ui/table-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type { UserDirectoryPerson as Person } from "@/features/users/types";
-import { getCoreRowModel, useLegacyTable, type LegacyColumnDef } from "@tanstack/react-table/legacy";
+import { getCoreRowModel, getPaginationRowModel, useLegacyTable, type LegacyColumnDef } from "@tanstack/react-table/legacy";
 import { Plus, Search, ShieldCheck, Users, X } from "lucide-react";
 import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { toast } from "sonner";
@@ -86,7 +89,10 @@ export default function UserDirectory({
   const table = useLegacyTable<Person>({
     data: filteredPeople,
     columns,
+    getRowId: (person) => person.id,
     getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: { pagination: { pageIndex: 0, pageSize: TABLE_PAGE_SIZE } },
   });
 
   const openCreate = () => {
@@ -123,7 +129,7 @@ export default function UserDirectory({
             active: values.active,
             ...(values.email ? { email: values.email } : { email: undefined }),
           };
-    const response = await fetch("/api/users", {
+    const response = await workspaceFetch("/api/users", {
       method: mode === "create" ? "POST" : "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -151,7 +157,7 @@ export default function UserDirectory({
   };
 
   const updateCid = async (person: Person, cid: string) => {
-    const response = await fetch("/api/users", {
+    const response = await workspaceFetch("/api/users", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: person.id, cid }),
@@ -171,7 +177,7 @@ export default function UserDirectory({
   };
 
   const issueTemporaryPassword = async (person: Person) => {
-    const response = await fetch("/api/users/reset-password", {
+    const response = await workspaceFetch("/api/users/reset-password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: person.id }),
@@ -351,7 +357,7 @@ export default function UserDirectory({
       ) : (
         <>
           <div className="grid gap-3 md:grid-cols-2 xl:hidden">
-            {filteredPeople.map((person) => (
+            {table.getRowModel().rows.map(({ original: person }) => (
               <PersonCard
                 key={person.id}
                 person={person}
@@ -364,24 +370,22 @@ export default function UserDirectory({
             ))}
           </div>
           <Card className="hidden overflow-hidden rounded-[1.75rem] border-[#e9e4ed] shadow-sm shadow-[#40304c]/[.025] xl:block">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[1120px] border-collapse text-left">
-                <thead>
-                  <tr>
+            <Table aria-label="รายชื่อผู้ใช้" className="min-w-[960px]">
+                <TableHeader>
+                  <TableRow>
                     {table.getHeaderGroups()[0]?.headers.map((header) => (
-                      <th
+                      <TableHead
                         key={header.id}
                         scope="col"
-                        className="h-12 border-b border-[#eeeaf2] bg-[#faf9fb] px-4 text-[11px] font-bold uppercase tracking-[.12em] text-[#8b8292]"
                       >
                         {typeof header.column.columnDef.header === "string"
                           ? header.column.columnDef.header
                           : header.id}
-                      </th>
+                      </TableHead>
                     ))}
-                  </tr>
-                </thead>
-                <tbody>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {table.getRowModel().rows.map((row) => (
                     <PersonTableRow
                       key={row.original.id}
@@ -393,10 +397,10 @@ export default function UserDirectory({
                       onResetPassword={() => setResetTarget(row.original)}
                     />
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </TableBody>
+              </Table>
           </Card>
+          <TablePagination page={table.getState().pagination.pageIndex + 1} total={filteredPeople.length} onPageChange={(page) => table.setPageIndex(page - 1)} />
         </>
       )}
 

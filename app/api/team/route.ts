@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getProfileForRequest } from "@/lib/server-access";
 import { prisma } from "@/lib/prisma";
-import { profileStorageConfigured } from "@/lib/storage";
+import { profileFileHref } from "@/lib/storage";
 
 export async function GET(request: Request) {
   const context = await getProfileForRequest(request.headers);
@@ -23,7 +23,6 @@ export async function GET(request: Request) {
     },
     orderBy: { fullName: "asc" },
   });
-  const storageAvailable = profileStorageConfigured();
 
   return NextResponse.json({
     people: people.map((person) => ({
@@ -35,8 +34,8 @@ export async function GET(request: Request) {
       positionLevel: person.positionLevel,
       mission: person.mission,
       workGroup: person.workGroup,
-      avatarUrl: storageAvailable && person.avatarPath ? `/api/profile/files/${person.id}/avatar` : null,
-      signatureUrl: storageAvailable && person.signaturePath ? `/api/profile/files/${person.id}/signature` : null,
+      avatarUrl: profileFileHref(person.id, "avatar", person.avatarPath),
+      signatureUrl: profileFileHref(person.id, "signature", person.signaturePath),
     })),
   });
 }

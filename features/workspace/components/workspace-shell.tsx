@@ -1,15 +1,19 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { workspaceFetch } from "@/lib/workspace-fetch";
+import { useState, useSyncExternalStore, type ReactNode } from "react";
 import ProfileMenu from "@/features/workspace/components/profile-menu";
+import { NotificationBell } from "./notifications";
 import { useRouter } from "next/navigation";
 import { Menu } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import WorkspaceSidebar from "@/features/workspace/components/workspace-sidebar";
+import { workspaceHref } from "@/features/workspace/navigation";
 import type { Role } from "@/lib/research-types";
 
 type WorkspaceShellProps = {
+  avatarUrl: string | null;
   activeItem: string;
   personName: string;
   role: Role;
@@ -21,7 +25,39 @@ type WorkspaceShellProps = {
   children: ReactNode;
 };
 
+const sidebarPreference = "research-tracker:sidebar-collapsed";
+let inMemoryCollapsed = false;
+
+function readSidebarPreference() {
+  try {
+    const value = window.localStorage.getItem(sidebarPreference);
+    return value === null ? inMemoryCollapsed : value === "true";
+  } catch {
+    return inMemoryCollapsed;
+  }
+}
+
+function subscribeToSidebarPreference(onChange: () => void) {
+  window.addEventListener(sidebarPreference, onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(sidebarPreference, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+function setSidebarCollapsed(collapsed: boolean) {
+  inMemoryCollapsed = collapsed;
+  try {
+    window.localStorage.setItem(sidebarPreference, String(collapsed));
+  } catch {
+    // Keep the preference in memory when storage is unavailable.
+  }
+  window.dispatchEvent(new Event(sidebarPreference));
+}
+
 export default function WorkspaceShell({
+  avatarUrl,
   activeItem,
   personName,
   role,
@@ -33,13 +69,18 @@ export default function WorkspaceShell({
   children,
 }: WorkspaceShellProps) {
   const router = useRouter();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const sidebarCollapsed = useSyncExternalStore(subscribeToSidebarPreference, readSidebarPreference, () => false);
+  const sidebarOffset = sidebarCollapsed ? "lg:ml-[88px]" : "lg:ml-[272px]";
   const [mobileOpen, setMobileOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const isManager = systemRole === "PM" || systemRole === "SUPERADMIN" || role === "PM" || role === "Superadmin";
 
   const navigate = (label: string) => {
     setMobileOpen(false);
+    if (label === "สรุปที่ปรึกษาหลัก") {
+      router.push("/advisors");
+      return;
+    }
     if (onNavigate) {
       onNavigate(label);
       return;
@@ -48,12 +89,12 @@ export default function WorkspaceShell({
       router.push("/users");
       return;
     }
-    router.push(`/?view=${encodeURIComponent(label)}`);
+    router.push(workspaceHref(label));
   };
 
   const changeMode = async (nextRole: Role) => {
     try {
-      const response = await fetch("/api/profile/mode", {
+      const response = await workspaceFetch("/api/profile/mode", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mode: nextRole === "Advisor" ? "ADVISOR" : "ADVISEE" }),
@@ -84,6 +125,7 @@ export default function WorkspaceShell({
   return (
     <div className="min-h-[100svh] bg-[#f7f7fa] text-[#302a38]">
       <WorkspaceSidebar
+        avatarUrl={avatarUrl}
         activeItem={activeItem}
         personName={personName}
         role={role}
@@ -100,7 +142,7 @@ export default function WorkspaceShell({
         onModeChange={changeMode}
       />
 
-      <header className={`sticky top-0 z-30 border-b border-[#e9e7ed] bg-white/95 px-3 backdrop-blur transition-[margin] duration-200 sm:px-6 lg:px-8 ${sidebarCollapsed ? "lg:ml-[76px]" : "lg:ml-[256px]"}`}>
+      <header className={`sticky top-0 z-30 border-b border-[#e9e7ed] bg-white/95 px-3 backdrop-blur motion-safe:transition-[margin] motion-safe:duration-200 sm:px-6 lg:px-8 ${sidebarOffset}`}>
         <div className="mx-auto flex min-h-[68px] max-w-[1600px] items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
             <Button
@@ -122,11 +164,14 @@ export default function WorkspaceShell({
             </div>
           </div>
 
-          <ProfileMenu name={personName} role={roleLabel(role, systemRole)} signingOut={signingOut} onSignOut={() => void signOut()} />
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <NotificationBell />
+            <ProfileMenu name={personName} avatarUrl={avatarUrl} role={roleLabel(role, systemRole)} signingOut={signingOut} onSignOut={() => void signOut()} />
+          </div>
         </div>
       </header>
 
-      <main id="top" className={`px-4 pb-24 pt-6 transition-[margin] duration-200 sm:px-6 sm:pb-10 sm:pt-8 lg:px-8 ${sidebarCollapsed ? "lg:ml-[76px]" : "lg:ml-[256px]"}`}>
+      <main id="top" className={`px-4 pb-24 pt-6 motion-safe:transition-[margin] motion-safe:duration-200 sm:px-6 sm:pb-10 sm:pt-8 lg:px-8 ${sidebarOffset}`}>
         <div className="mx-auto max-w-[1600px]">{children}</div>
       </main>
     </div>

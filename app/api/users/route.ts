@@ -4,7 +4,7 @@ import { getProfileForRequest } from "@/lib/server-access";
 import { cidLookupKeyFromCid, providerEmailAlias } from "@/lib/provider-id";
 import { canManageSystemRoles, canManageUsers } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
-import { createProfileFileUrl } from "@/lib/storage";
+import { profileFileHref } from "@/lib/storage";
 
 const capabilities = [ProfileCapability.ADVISOR, ProfileCapability.ADVISEE] as const;
 const systemRoles = [SystemRole.USER, SystemRole.PM, SystemRole.SUPERADMIN] as const;
@@ -22,11 +22,7 @@ async function requireManager(request: Request) {
   return { context };
 }
 
-async function personResponse(person: DirectoryRecord) {
-  const [avatarUrl, signatureUrl] = await Promise.all([
-    person.avatarPath ? createProfileFileUrl(person.avatarPath).catch(() => null) : null,
-    person.signaturePath ? createProfileFileUrl(person.signaturePath).catch(() => null) : null,
-  ]);
+function personResponse(person: DirectoryRecord) {
   return {
     id: person.id,
     providerId: person.providerId,
@@ -42,8 +38,8 @@ async function personResponse(person: DirectoryRecord) {
     positionLevel: person.positionLevel,
     mission: person.mission,
     workGroup: person.workGroup,
-    avatarUrl,
-    signatureUrl,
+    avatarUrl: profileFileHref(person.id, "avatar", person.avatarPath),
+    signatureUrl: profileFileHref(person.id, "signature", person.signaturePath),
   };
 }
 
@@ -103,7 +99,7 @@ export async function POST(request: Request) {
       },
       include: { capabilities: true },
     });
-    return NextResponse.json({ person: await personResponse(person) }, { status: 201 });
+    return NextResponse.json({ person: personResponse(person) }, { status: 201 });
   } catch (error) {
     if (uniqueError(error)) return NextResponse.json({ error: "The CID or email is already registered." }, { status: 409 });
     throw error;
@@ -214,5 +210,5 @@ export async function PATCH(request: Request) {
 
   const updated = await prisma.researchProfile.findUnique({ where: { id: target.id }, include: { capabilities: true } });
   if (!updated) return NextResponse.json({ error: "Could not load updated user." }, { status: 500 });
-  return NextResponse.json({ person: await personResponse(updated) });
+  return NextResponse.json({ person: personResponse(updated) });
 }

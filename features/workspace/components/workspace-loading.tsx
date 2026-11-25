@@ -4,7 +4,7 @@ import { LoadingShape, Placeholder } from "@/components/ui/page-loading";
 export default function WorkspaceLoading({ label, children }: { label: string; children: ReactNode }) {
   return (
     <LoadingShape label={label}>
-      <div className="min-h-svh bg-[#f7f7fa] lg:grid lg:grid-cols-[256px_minmax(0,1fr)]">
+      <div className="min-h-svh bg-[#f7f7fa] lg:grid lg:grid-cols-[272px_minmax(0,1fr)]">
         <aside className="hidden border-r border-border bg-white p-4 lg:block">
           <Placeholder className="mb-8 h-11 w-40" />
           {Array.from({ length: 5 }, (_, index) => <Placeholder key={index} className="mb-3 h-10 w-full" />)}

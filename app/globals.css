@@ -32,8 +32,9 @@
   --card-spacing: 1.25rem;
 }
 @theme inline {
-  --font-sans: var(--font-geist-sans), "Noto Sans Thai", Tahoma, Arial, sans-serif;
-  --font-heading: var(--font-geist-sans), "Noto Sans Thai", Tahoma, Arial, sans-serif;
+  --font-sans: var(--font-th-sarabun);
+  --font-heading: var(--font-th-sarabun);
+  --font-mono: var(--font-th-sarabun);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

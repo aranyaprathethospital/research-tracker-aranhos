@@ -100,7 +100,7 @@ export function ResetPasswordDialog({
                     readOnly
                     value={temporaryPassword}
                     aria-label="รหัสผ่านชั่วคราว"
-                    className="h-12 border-[#dce7d2] bg-white font-mono text-lg font-semibold tracking-[.16em] text-[#354529]"
+                    className="h-12 border-[#dce7d2] bg-white text-lg font-semibold tabular-nums tracking-[.16em] text-[#354529]"
                     onFocus={(event) => event.currentTarget.select()}
                   />
                   <Button

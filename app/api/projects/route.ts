@@ -49,6 +49,12 @@ export async function POST(request: Request) {
       },
       reviews: { create: advisorIds.map((advisorId) => ({ advisorId, status: reviewStatuses[0], updatedAt: new Date() })) },
       updates: { create: { actorId: context.profile.id, summary: "Created research project" } },
+      notifications: { create: [...new Set([advisee.id, ...advisorIds])].filter((id) => id !== context.profile.id).map((recipientId) => ({
+        recipientId,
+        kind: "assignment",
+        message: "คุณได้รับมอบหมายให้ร่วมโครงการวิจัย",
+        projectTitle: body.title.trim(),
+      })) },
     },
     include: projectInclude(),
   });
@@ -131,9 +137,26 @@ export async function PATCH(request: Request) {
     if (typeof body.comment !== "string" || !body.comment.trim() || body.comment.length > 4000) return response(400, "Enter a valid comment.");
   }
 
-  await prisma.$transaction(async (tx) => {
+  const saved = await prisma.$transaction(async (tx) => {
+    // Compare events against the state committed by the preceding project update.
+    await tx.$queryRaw`SELECT id FROM "ResearchProject" WHERE id = ${project.id} FOR UPDATE`;
+    if ("review" in body || "comment" in body) {
+      const assignment = await tx.researchProjectAdvisor.findUnique({
+        where: { projectId_advisorId: { projectId: project.id, advisorId: profile.id } },
+        select: { advisorId: true },
+      });
+      if (!assignment) return false;
+    }
+    const reviewBefore = "review" in body ? await tx.advisorReview.findUnique({
+      where: { projectId_advisorId: { projectId: project.id, advisorId: profile.id } },
+      select: { status: true },
+    }) : null;
+    const reviewChanged = "review" in body && body.review !== (reviewBefore?.status ?? reviewStatuses[0]);
     if (assignmentChanged) {
       const advisorIds = [primaryAdvisorId, ...secondaryAdvisorIds];
+      const previous = await tx.researchProjectAdvisor.findMany({ where: { projectId: project.id } });
+      const recipients = advisorIds.filter((id) => id !== profile.id && !previous.some((entry) =>
+        entry.advisorId === id && entry.assignmentType === (id === primaryAdvisorId ? "PRIMARY" : "SECONDARY")));
       await tx.researchProjectAdvisor.deleteMany({ where: { projectId: project.id } });
       await tx.researchProjectAdvisor.createMany({
         data: advisorIds.map((advisorId) => ({ projectId: project.id, advisorId, assignmentType: advisorId === primaryAdvisorId ? "PRIMARY" : "SECONDARY" })),
@@ -144,6 +167,12 @@ export async function PATCH(request: Request) {
         update: {},
       })));
       await tx.advisorReview.deleteMany({ where: { projectId: project.id, advisorId: { notIn: advisorIds } } });
+      if (recipients.length) await tx.researchNotification.createMany({
+        data: recipients.map((recipientId) => ({
+          recipientId, projectId: project.id, kind: "assignment", projectTitle: project.title,
+          message: recipientId === primaryAdvisorId ? "คุณได้รับมอบหมายเป็นที่ปรึกษาหลัก" : "คุณได้รับมอบหมายเป็นที่ปรึกษารอง",
+        })),
+      });
     }
     if ("review" in body) {
       await tx.advisorReview.upsert({
@@ -158,8 +187,18 @@ export async function PATCH(request: Request) {
       await tx.advisorComment.create({ data: { projectId: project.id, authorId: profile.id, body: body.comment.trim() } });
       await tx.researchUpdate.create({ data: { projectId: project.id, actorId: profile.id, summary: "Added advisor comment" } });
     }
+    if (project.adviseeId !== profile.id && (reviewChanged || "comment" in body)) {
+      await tx.researchNotification.create({ data: {
+        recipientId: project.adviseeId, projectId: project.id, kind: "review", projectTitle: project.title,
+        message: "comment" in body
+          ? reviewChanged ? "ที่ปรึกษาอัปเดตผลตรวจและเพิ่มความเห็น" : "ที่ปรึกษาเพิ่มความเห็น"
+          : "ที่ปรึกษาอัปเดตสถานะการตรวจ",
+      } });
+    }
+    return true;
   });
 
+  if (!saved) return response(403, "คุณไม่ได้รับมอบหมายเป็นที่ปรึกษาของโครงการนี้แล้ว");
   const updated = await prisma.researchProject.findUnique({ where: { id: project.id }, include: projectInclude() });
   return NextResponse.json({ ok: true, ...(updated ? { project: toResearchItem(updated, isAdvisor ? profile.id : undefined) } : {}) });
 }

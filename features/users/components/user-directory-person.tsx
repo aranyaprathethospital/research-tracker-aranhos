@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { TableRow } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import type { UserDirectoryPerson as Person } from "@/features/users/types";
 import { BadgeCheck, FilePenLine, IdCard, KeyRound, Mail } from "lucide-react";
@@ -22,12 +23,12 @@ export function PersonTableRow({
   onResetPassword: () => void;
 }) {
   return (
-    <tr className="border-b border-[#f0edf3] align-middle transition last:border-0 hover:bg-[#fcfbfd]">
+    <TableRow>
       <td className="px-4 py-4">
         <PersonIdentity person={person} compact={false} />
       </td>
       <td className="px-4 py-4">
-        <span className="block max-w-52 truncate text-sm text-[#675d71]">
+        <span className="block max-w-52 wrap-break-word text-sm text-[#675d71]">
           {person.email || "ยังไม่ตั้งค่า"}
         </span>
         <span className="mt-1 block max-w-52 truncate text-xs text-[#a097a7]">
@@ -66,7 +67,7 @@ export function PersonTableRow({
           compact={false}
         />
       </td>
-    </tr>
+    </TableRow>
   );
 }
 

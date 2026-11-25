@@ -1,10 +1,11 @@
 import "server-only";
+import { env } from "@/lib/env";
 
 const bucket = "research-profile-files";
 
 function config() {
-  const url = process.env.SUPABASE_URL?.replace(/\/$/, "");
-  const key = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = env.SUPABASE_URL?.replace(/\/$/, "");
+  const key = env.SUPABASE_SECRET_KEY ?? env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) {
     throw new Error("Set SUPABASE_URL and SUPABASE_SECRET_KEY to enable profile file storage.");
   }
@@ -15,15 +16,21 @@ function storagePath(path: string) {
   return path.split("/").map(encodeURIComponent).join("/");
 }
 
-export async function uploadProfileFile(path: string, bytes: ArrayBuffer, contentType: string) {
+function storageHeaders(key: string) {
+  return {
+    apikey: key,
+    ...(key.startsWith("sb_secret_") ? {} : { Authorization: `Bearer ${key}` }),
+  };
+}
+
+export async function uploadProfileFile(path: string, bytes: ArrayBuffer, contentType: string, maxAge = 3600) {
   const { url, key } = config();
   const response = await fetch(`${url}/storage/v1/object/${bucket}/${storagePath(path)}`, {
     method: "POST",
     headers: {
-      apikey: key,
-      Authorization: `Bearer ${key}`,
+      ...storageHeaders(key),
       "Content-Type": contentType,
-      "Cache-Control": "max-age=3600",
+      "Cache-Control": `max-age=${maxAge}`,
       "x-upsert": "true",
     },
     body: bytes,
@@ -32,13 +39,23 @@ export async function uploadProfileFile(path: string, bytes: ArrayBuffer, conten
   if (!response.ok) throw new Error(`Supabase Storage upload failed (${response.status}).`);
 }
 
+export async function removeProfileFiles(paths: string[]) {
+  const { url, key } = config();
+  const response = await fetch(`${url}/storage/v1/object/${bucket}`, {
+    method: "DELETE",
+    headers: { ...storageHeaders(key), "Content-Type": "application/json" },
+    body: JSON.stringify({ prefixes: paths }),
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error(`Supabase Storage cleanup failed (${response.status}).`);
+}
+
 export async function createProfileFileUrl(path: string, expiresIn = 3600) {
   const { url, key } = config();
   const response = await fetch(`${url}/storage/v1/object/sign/${bucket}/${storagePath(path)}`, {
     method: "POST",
     headers: {
-      apikey: key,
-      Authorization: `Bearer ${key}`,
+      ...storageHeaders(key),
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ expiresIn }),
@@ -56,5 +73,11 @@ export async function createProfileFileUrl(path: string, expiresIn = 3600) {
 }
 
 export function profileStorageConfigured() {
-  return Boolean(process.env.SUPABASE_URL && (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY));
+  return Boolean(env.SUPABASE_URL && (env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY));
+}
+
+export function profileFileHref(profileId: string, kind: "avatar" | "signature", path: string | null) {
+  return path && profileStorageConfigured()
+    ? `/api/profile/files/${encodeURIComponent(profileId)}/${kind}`
+    : null;
 }
