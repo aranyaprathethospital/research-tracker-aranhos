@@ -11,6 +11,27 @@ import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/password-policy"
 type JsonRecord = Record<string, unknown>;
 const asRecord = (value: unknown): JsonRecord => value && typeof value === "object" ? value as JsonRecord : {};
 const nestedData = (value: unknown) => asRecord(asRecord(value).data);
+const healthIdErrorReasons = new Map([
+  ["credential is required", "missing_credentials"],
+  ["access grant has denied", "access_denied"],
+  ["code is invalid", "invalid_code"],
+  ["redirect uri is invalid", "redirect_uri_mismatch"],
+  ["code and client id not match", "code_client_mismatch"],
+  ["code has been expired", "expired_code"],
+  ["server error", "upstream_error"],
+  ["invalid_client", "invalid_client"],
+  ["invalid_grant", "invalid_grant"],
+]);
+
+function healthIdFailureReason(payload: unknown, status: number) {
+  const { error, message } = asRecord(payload);
+  for (const value of [error, message]) {
+    if (typeof value !== "string") continue;
+    const reason = healthIdErrorReasons.get(value.trim().toLowerCase().replace(/\.$/, ""));
+    if (reason) return reason;
+  }
+  return status >= 200 && status < 300 ? "missing_access_token" : "unclassified_response";
+}
 
 const moph = providerIdConfig();
 const providerEnabled = isProviderIdConfigured();
@@ -43,7 +64,10 @@ const providerPlugin = providerEnabled ? genericOAuth({
       const data = nestedData(payload);
       const accessToken = data.access_token;
       if (!response.ok || typeof accessToken !== "string" || !accessToken) {
-        console.warn("[ProviderID] Health ID token exchange failed", { status: response.status });
+        console.warn("[ProviderID] Health ID token exchange failed", {
+          status: response.status,
+          reason: healthIdFailureReason(payload, response.status),
+        });
         throw new Error("Health ID code exchange failed");
       }
       const expiresIn = typeof data.expires_in === "number" ? data.expires_in : 3600;
