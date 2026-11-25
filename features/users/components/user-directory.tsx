@@ -4,14 +4,15 @@ import { workspaceFetch } from "@/lib/workspace-fetch";
 import { Table, TableHeader, TableRow, TableHead, TableBody } from "@/components/ui/table";
 import { TablePagination, TABLE_PAGE_SIZE } from "@/components/ui/table-pagination";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { SelectField } from "@/components/ui/select";
 import type { UserDirectoryPerson as Person } from "@/features/users/types";
 import { getCoreRowModel, getPaginationRowModel, useLegacyTable, type LegacyColumnDef } from "@tanstack/react-table/legacy";
-import { Plus, Search, ShieldCheck, Users, X } from "lucide-react";
+import { Plus, Search, Users, X } from "lucide-react";
 import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { toast } from "sonner";
-import { inputClass, selectClass } from "./user-directory-fields";
+import { inputClass } from "./user-directory-fields";
 import { type UserFormValues, type EditorMode } from "./user-form-schema";
 import { UserEditorDialog } from "./user-editor-dialog";
 import { CidEditorDialog } from "./user-cid-dialog";
@@ -21,6 +22,16 @@ import { PersonTableRow, PersonCard } from "./user-directory-person";
 type StatusFilter = "ALL" | "ACTIVE" | "PENDING" | "INACTIVE";
 
 type RoleFilter = "ALL" | "USER" | "PM" | "SUPERADMIN" | "ADVISEE" | "ADVISOR";
+
+const statusLabels: Record<StatusFilter, string> = { ALL: "ทุกสถานะ", ACTIVE: "เปิดใช้งาน", PENDING: "รอเชื่อมบัญชี", INACTIVE: "ปิดใช้งาน" };
+const roleOptions: { value: RoleFilter; label: string }[] = [
+  { value: "ALL", label: "ทุกบทบาท" },
+  { value: "USER", label: "ผู้ใช้ทั่วไป" },
+  { value: "PM", label: "PM" },
+  { value: "SUPERADMIN", label: "Superadmin" },
+  { value: "ADVISEE", label: "นักวิจัย" },
+  { value: "ADVISOR", label: "ที่ปรึกษา" },
+];
 
 type UserDirectoryProps = {
   people: Person[];
@@ -200,31 +211,21 @@ export default function UserDirectory({
 
   return (
     <div className="space-y-4 sm:space-y-5">
-      <Card className="overflow-hidden rounded-[1.75rem] border-[#e9e4ed] shadow-sm shadow-[#40304c]/[.025]">
+      <Card>
         <CardHeader className="flex flex-col gap-4 px-4 pb-4 pt-5 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:pt-6">
           <div className="min-w-0">
-            <span className="inline-flex items-center gap-2 rounded-full bg-[#f2edf7] px-3 py-1.5 text-xs font-bold tracking-wide text-[#6d4a8b]">
-              <ShieldCheck className="size-4" />
-              จัดการสิทธิ์เข้าใช้งาน
-            </span>
-            <CardTitle className="mt-3 text-lg font-semibold text-[#382d43] sm:text-xl">
-              รายชื่อและบัญชีผู้ใช้
-            </CardTitle>
-            <CardDescription className="mt-1 max-w-3xl text-sm leading-6 text-[#817888] sm:text-[15px]">
-              ลงทะเบียน CID ก่อนเข้า ProviderID · PM จัดการ Advisor/Advisee ·
-              Superadmin จัดการสิทธิ์ระบบ
-            </CardDescription>
+            <CardTitle className="text-2xl">บัญชีผู้ใช้</CardTitle>
           </div>
           <Button
             onClick={openCreate}
-            className="h-11 w-full shrink-0 rounded-xl bg-[#65418a] px-4 text-sm font-semibold shadow-[0_8px_18px_rgba(101,65,138,.18)] transition hover:-translate-y-0.5 hover:bg-[#573576] sm:w-auto"
+            className="w-full sm:w-auto"
           >
             <Plus className="size-4" />
             เพิ่มผู้ใช้
           </Button>
         </CardHeader>
         <CardContent className="space-y-4 px-4 pb-5 sm:px-6 sm:pb-6">
-          <div className="grid gap-3 rounded-2xl border border-[#ece5f0] bg-[#f8f5fa] p-3 sm:grid-cols-2 sm:p-4 lg:grid-cols-[minmax(0,1fr)_190px_190px]">
+          <div className="grid gap-3 rounded-lg border border-[#e7e0d9] bg-[#fbf8f5] p-3 sm:grid-cols-2 sm:p-4 xl:grid-cols-[minmax(0,1fr)_190px_190px]">
             <div className="min-w-0 sm:col-span-2 lg:col-span-1">
               <label htmlFor="user-directory-search" className="mb-2 block text-sm font-semibold text-foreground">ค้นหารายชื่อผู้ใช้</label>
               <div className="relative">
@@ -247,46 +248,16 @@ export default function UserDirectory({
               )}
               </div>
             </div>
-            <label className="block min-w-0">
-              <span className="mb-2 block text-sm font-semibold text-foreground">สถานะบัญชี</span>
-              <select
-                value={statusFilter}
-                onChange={(event) =>
-                  setStatusFilter(event.target.value as StatusFilter)
-                }
-                className={selectClass}
-                aria-label="กรองสถานะบัญชี"
-              >
-                <option value="ALL">ทุกสถานะ · {statusCounts.ALL}</option>
-                <option value="ACTIVE">
-                  เปิดใช้งาน · {statusCounts.ACTIVE}
-                </option>
-                <option value="PENDING">
-                  รอเชื่อมบัญชี · {statusCounts.PENDING}
-                </option>
-                <option value="INACTIVE">
-                  ปิดใช้งาน · {statusCounts.INACTIVE}
-                </option>
-              </select>
-            </label>
-            <label className="block min-w-0">
-              <span className="mb-2 block text-sm font-semibold text-foreground">บทบาท</span>
-              <select
-                value={roleFilter}
-                onChange={(event) =>
-                  setRoleFilter(event.target.value as RoleFilter)
-                }
-                className={selectClass}
-                aria-label="กรองบทบาทผู้ใช้"
-              >
-                <option value="ALL">ทุกบทบาท</option>
-                <option value="USER">ผู้ใช้ทั่วไป</option>
-                <option value="PM">PM</option>
-                <option value="SUPERADMIN">Superadmin</option>
-                <option value="ADVISEE">Advisee</option>
-                <option value="ADVISOR">Advisor</option>
-              </select>
-            </label>
+            <div className="min-w-0">
+              <p className="mb-2 text-sm font-bold">สถานะบัญชี</p>
+              <SelectField label="กรองสถานะบัญชี" value={statusFilter}
+                options={(Object.keys(statusLabels) as StatusFilter[]).map((value) => ({ value, label: `${statusLabels[value]} · ${statusCounts[value]}` }))}
+                onChange={setStatusFilter} />
+            </div>
+            <div className="min-w-0">
+              <p className="mb-2 text-sm font-bold">บทบาท</p>
+              <SelectField label="กรองบทบาทผู้ใช้" value={roleFilter} options={roleOptions} onChange={setRoleFilter} />
+            </div>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#f0edf3] pt-3">
             <p className="text-sm text-[#817888]">

@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, BookOpenCheck, GraduationCap, TriangleAlert } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 type Mode = "ADVISOR" | "ADVISEE";
 
@@ -28,29 +26,28 @@ export default function RolePicker({ modes }: { modes: Mode[] }) {
   };
 
   return (
-    <Card className="mx-auto w-full max-w-2xl overflow-hidden rounded-2xl border-[#e9e7ed] bg-white shadow-[0_16px_44px_rgba(47,39,57,.08)]">
-      <CardHeader className="px-6 pt-7 sm:px-9 sm:pt-9">
-        <span className="mb-2 inline-flex w-fit rounded-full bg-[#f4eef8] px-3 py-1.5 text-sm font-semibold text-[#684783]">Research Tracker</span>
-        <CardTitle className="text-2xl font-semibold tracking-tight text-[#30283a] sm:text-3xl">เลือกโหมดการทำงาน</CardTitle>
-        <CardDescription className="text-base leading-7">เลือกบทบาทสำหรับรอบการใช้งานนี้ และเปลี่ยนโหมดได้ภายหลัง</CardDescription>
-      </CardHeader>
-      <CardContent className="px-6 pb-7 sm:px-9 sm:pb-9">
+    <main aria-labelledby="role-title">
+      <h1 id="role-title" className="text-4xl font-bold leading-none tracking-tight sm:text-5xl">เลือกโหมดการทำงาน</h1>
+      <p className="mt-3 text-lg text-muted-foreground">สลับโหมดได้ภายหลังจากเมนูโปรไฟล์</p>
+      <div className="mt-6">
         {modes.length === 0 ? <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900"><TriangleAlert className="mt-0.5 size-5 shrink-0" />บัญชีนี้ยังไม่ได้รับสิทธิ์ Advisor หรือ Advisee โปรดติดต่อ PM</div> :
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3">
             {modes.map((mode) => {
               const advisor = mode === "ADVISOR";
               const Icon = advisor ? BookOpenCheck : GraduationCap;
-              return <button key={mode} onClick={() => void choose(mode)} disabled={busy !== null} className="group min-h-48 rounded-xl border border-[#e8e5ec] bg-white p-5 text-left transition-colors hover:border-[#cfc2da] hover:bg-[#fbf9fc] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#85619c]/20 disabled:opacity-60 sm:p-6">
-                <span className="flex items-center justify-between"><span className="grid size-12 place-items-center rounded-2xl bg-[#f4eef8] text-[#704b8d]"><Icon className="size-6" /></span><ArrowRight className="size-5 text-[#a298aa] transition group-hover:translate-x-1 group-hover:text-[#704b8d]" /></span>
-                <span className="mt-5 block text-lg font-semibold text-[#382a45]">{advisor ? "Advisor · ที่ปรึกษา" : "Advisee · นักวิจัย"}</span>
-                <span className="mt-2 block text-sm leading-6 text-[#766d80]">{advisor ? "ดูงานที่ได้รับมอบหมายและให้ความเห็นแยกตามโครงการ" : "ติดตามความคืบหน้าและจัดการงานวิจัยของคุณ"}</span>
-                {busy === mode && <span className="mt-3 block text-sm font-medium text-[#704b8d]">กำลังเปลี่ยนโหมด…</span>}
+              return <button key={mode} type="button" onClick={() => void choose(mode)} disabled={busy !== null} className="group flex items-start gap-3 rounded-lg border border-[#e7e0d9] bg-white p-4 text-left transition-colors hover:border-[#cfc2da] hover:bg-[#faf6fa] focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-60 sm:gap-4 sm:p-5">
+                <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-secondary text-primary"><Icon aria-hidden className="size-5" /></span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-xl font-bold leading-tight">{advisor ? "ที่ปรึกษา · Advisor" : "นักวิจัย · Advisee"}</span>
+                  <span className="mt-0.5 block text-base leading-snug text-muted-foreground">{advisor ? "ตรวจโครงการที่ได้รับมอบหมายและให้ความเห็น" : "อัปเดตและติดตามงานวิจัยของคุณ"}</span>
+                  {busy === mode && <span role="status" className="mt-2 block text-base font-bold text-primary">กำลังเปลี่ยนโหมด…</span>}
+                </span>
+                <ArrowRight aria-hidden className="mt-2 size-4 shrink-0 text-primary motion-safe:transition-transform motion-safe:group-hover:translate-x-0.5" />
               </button>;
             })}
           </div>}
         {error && <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800" role="alert">{error}</p>}
-        {busy && <Button disabled className="sr-only">กำลังเปลี่ยนโหมด</Button>}
-      </CardContent>
-    </Card>
+      </div>
+    </main>
   );
 }

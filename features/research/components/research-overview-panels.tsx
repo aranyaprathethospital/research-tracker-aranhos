@@ -1,38 +1,81 @@
+import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { th } from "date-fns/locale";
-import { ArrowDownRight, ArrowRight, BookOpenCheck, ChevronDown, CircleAlert } from "lucide-react";
-import { type Research } from "@/lib/research-types";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowUpRight, CalendarDays, Check, CircleAlert, ChevronRight, type LucideIcon } from "lucide-react";
+import type { Research } from "@/lib/research-types";
+import { Card } from "@/components/ui/card";
 import { dayDiff } from "./project-display";
 
-export function MetricCard({ title, value, detail, icon: Icon, tone }: { title: string; value: number; detail: string; icon: typeof BookOpenCheck; tone: "violet" | "blue" | "green" | "rose" }) {
-  const tones = { violet: "bg-[#f2edf7] text-[#704b8d]", blue: "bg-[#edf3fb] text-[#5473a1]", green: "bg-[#eef5e7] text-[#64813d]", rose: "bg-[#fff0ed] text-[#a85449]" };
-  return <Card className="min-h-[144px] rounded-[1.5rem] border-[#e9e4ed] shadow-sm shadow-[#40304c]/[.025] sm:min-h-[158px]">
-    <CardContent className="p-4 sm:p-5"><div className="flex items-start justify-between gap-2"><span className="grid size-10 place-items-center rounded-xl sm:size-11 sm:rounded-2xl"><span className={`grid size-full place-items-center rounded-[inherit] ${tones[tone]}`}><Icon className="size-5" /></span></span><ArrowDownRight className="size-4 text-[#b6aebb]" /></div><div className="mt-3 text-2xl font-semibold tabular-nums tracking-tight text-[#33273f] sm:mt-4 sm:text-3xl">{String(value).padStart(2, "0")}</div><div className="mt-1 text-sm font-semibold text-[#51465c] sm:text-base">{title}</div><p className="mt-1 text-sm text-[#8b8292]">{detail}</p></CardContent>
-  </Card>;
+const metricTones = {
+  violet: "bg-[#eee6f1] text-[#68447d]",
+  blue: "bg-[#e8edf3] text-[#466382]",
+  green: "bg-[#eaf0e4] text-[#4c6a3b]",
+  rose: "bg-[#f5e9e6] text-[#974b45]",
+};
+
+export function MetricCard({ title, value, icon: Icon, tone, href }: { title: string; value: number; icon: LucideIcon; tone: keyof typeof metricTones; href?: string }) {
+  const className = "group block min-w-0 border-[#e6dfd9] px-4 py-4 first:border-r second:border-b nth-3:border-r nth-3:border-t sm:px-6 xl:border-0";
+  const content = (
+    <>
+      <span className="flex items-center justify-between gap-2">
+        <span aria-hidden className={`grid size-9 shrink-0 place-items-center rounded-lg ${metricTones[tone]}`}><Icon className="size-[17px]" /></span>
+        {href && <ArrowUpRight aria-hidden className="size-4 text-[#766581] motion-safe:transition-transform motion-safe:group-hover:translate-x-0.5 motion-safe:group-hover:-translate-y-0.5" />}
+      </span>
+      <span className="mt-2.5 block text-4xl font-bold leading-none tabular-nums tracking-tight text-[#33253b] sm:text-5xl">{value}</span>
+      <span className="mt-1 block text-base font-bold leading-tight text-[#5a4b60] sm:text-lg">{title}</span>
+    </>
+  );
+  return href
+    ? <Link href={href} className={`${className} hover:bg-[#f5eff5] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary`}>{content}</Link>
+    : <div className={className}>{content}</div>;
 }
 
-export function DeadlinePanel({ items, total, expanded, onToggle, onSelect, onViewAll }: { items: Research[]; total: number; expanded: boolean; onToggle: () => void; onSelect: (id: string) => void; onViewAll: () => void }) {
-  return <Card className="rounded-[1.5rem] border-[#e9e4ed] shadow-sm shadow-[#40304c]/[.025]">
-    <CardHeader className="flex flex-row items-start justify-between gap-3 px-5 pb-3 pt-5"><div><CardTitle className="text-base font-semibold text-[#3e3348]">กำหนดส่งใกล้ถึง</CardTitle><p className="mt-1 text-sm text-[#817888]">รายการใน 14 วันข้างหน้า</p></div><Button onClick={onToggle} variant="ghost" size="icon" aria-label={expanded ? "ย่อรายการ" : "ดูรายการทั้งหมด"} className="size-9 rounded-lg text-[#82798a]"><ChevronDown className={`size-4 transition ${expanded ? "rotate-180" : ""}`} /></Button></CardHeader>
-    <CardContent className="space-y-1 px-3 pb-4">
-      {items.length ? items.map((item) => { const diff = dayDiff(item.dueDate); return <button key={item.id} onClick={() => onSelect(item.id)} className="flex min-h-[68px] w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-[#f8f6fa]">
-        <span className={`grid size-11 shrink-0 place-items-center rounded-xl ${diff < 0 ? "bg-[#fff0ed] text-[#a85449]" : "bg-[#f2edf7] text-[#674382]"}`}><span className="text-base font-bold leading-none">{format(parseISO(item.dueDate), "d")}</span><span className="mt-1 text-xs">{format(parseISO(item.dueDate), "MMM", { locale: th })}</span></span>
-        <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-[#4a3f55]">{item.title}</span><span className="mt-1 block truncate text-sm text-[#8b8292]">{item.student}</span></span>
-        <span className={`shrink-0 text-xs font-semibold ${diff < 0 ? "text-[#a85449]" : "text-[#817888]"}`}>{diff < 0 ? `เกิน ${Math.abs(diff)} วัน` : diff === 0 ? "วันนี้" : `${diff} วัน`}</span>
-      </button>; }) : <p className="rounded-xl bg-[#faf9fb] px-3 py-6 text-center text-sm text-[#817888]">ยังไม่มีกำหนดส่งใกล้ถึง</p>}
-      {total > 4 && <Button variant="ghost" onClick={onViewAll} className="mt-1 h-10 w-full justify-center rounded-xl text-[#694786]">ดูงานวิจัยทั้งหมด <ArrowRight className="size-4" /></Button>}
-    </CardContent>
-  </Card>;
+type PanelProps = { items: Research[]; total: number; onSelect: (id: string) => void };
+
+export function DeadlinePanel(props: PanelProps) {
+  return <QueuePanel {...props} kind="due" />;
 }
 
-export function AttentionPanel({ items, total, onSelect, onViewAll }: { items: Research[]; total: number; onSelect: (id: string) => void; onViewAll: () => void }) {
-  return <Card className="rounded-[1.5rem] border-[#e9e4ed] shadow-sm shadow-[#40304c]/[.025]">
-    <CardHeader className="flex flex-row items-center gap-3 px-5 pb-3 pt-5"><span className="grid size-10 place-items-center rounded-xl bg-[#fff0ed] text-[#a85449]"><CircleAlert className="size-5" /></span><div><CardTitle className="text-base font-semibold text-[#3e3348]">รายการที่ต้องติดตาม</CardTitle><p className="mt-1 text-sm text-[#817888]">มีเรื่องรอการดูแล {total} รายการ</p></div></CardHeader>
-    <CardContent className="space-y-1 px-3 pb-4">
-      {items.length ? items.map((item) => <button key={item.id} onClick={() => onSelect(item.id)} className="flex min-h-14 w-full items-center gap-3 rounded-xl px-3 text-left transition hover:bg-[#f8f6fa]"><span className="size-2 shrink-0 rounded-full bg-[#d98a70]" /><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-[#4c4057]">{item.issue || (item.review === "ขอแก้ไข" ? "ที่ปรึกษาขอให้ปรับแก้" : "เลยกำหนดส่ง")}</span><span className="mt-0.5 block text-sm text-[#8b8292]">{item.student} · {item.id}</span></span><ArrowRight className="size-4 shrink-0 text-[#9a91a0]" /></button>) : <p className="rounded-xl bg-[#faf9fb] px-3 py-6 text-center text-sm text-[#817888]">ไม่มีรายการค้างติดตาม</p>}
-      {total > 0 && <Button variant="ghost" onClick={onViewAll} className="mt-1 h-10 w-full justify-center rounded-xl text-[#694786]">ดูรายการที่ต้องติดตาม <ArrowRight className="size-4" /></Button>}
-    </CardContent>
-  </Card>;
+export function AttentionPanel(props: PanelProps) {
+  return <QueuePanel {...props} kind="attention" />;
+}
+
+function QueuePanel({ items, total, onSelect, kind }: PanelProps & { kind: "due" | "attention" }) {
+  const due = kind === "due";
+  const Icon = due ? CalendarDays : CircleAlert;
+  return (
+    <Card>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#eee8e2] px-4 py-3.5 sm:px-5">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Icon aria-hidden className={`size-[18px] shrink-0 ${due ? "text-[#587246]" : "text-[#984f48]"}`} />
+          <h2 className="text-xl font-bold leading-tight">{due ? "กำหนดส่งใน 14 วัน" : "รายการที่ต้องติดตาม"}</h2>
+        </div>
+        {total > 0 && <Link href={`/projects?filter=${kind}`} className="rounded text-base font-bold text-primary hover:underline focus-visible:outline-2 focus-visible:outline-primary">ดูทั้งหมด {total} รายการ</Link>}
+      </div>
+      {items.length > 0 ? (
+        <ul className="divide-y divide-[#eee8e2]">
+          {items.map((item) => (
+            <li key={item.id}>
+              <button type="button" onClick={() => onSelect(item.id)} className="group flex min-h-[4.25rem] w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-[#fbf8f5] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary sm:px-5">
+                {due ? <time dateTime={item.dueDate} className="grid min-w-11 shrink-0 justify-items-center rounded-md bg-[#edf1e8] px-1 py-1 leading-none text-[#486037]">
+                  <span className="text-xl font-bold tabular-nums">{format(parseISO(item.dueDate), "d")}</span>
+                  <span className="text-sm">{format(parseISO(item.dueDate), "MMM", { locale: th })}</span>
+                </time> : <span aria-hidden className="size-2 shrink-0 rounded-full bg-[#ac6b5e]" />}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-lg font-bold leading-tight">{item.title}</span>
+                  <span className="mt-0.5 block truncate text-base leading-tight text-muted-foreground">{due ? item.student : item.issue || (item.review === "ขอแก้ไข" ? "ที่ปรึกษาขอให้ปรับแก้" : "เลยกำหนดส่ง")}</span>
+                </span>
+                {due && <span className="shrink-0 text-sm font-bold text-[#536648]">{dayDiff(item.dueDate) === 0 ? "วันนี้" : `อีก ${dayDiff(item.dueDate)} วัน`}</span>}
+                <ChevronRight aria-hidden className="size-4 shrink-0 text-[#8a798c] group-hover:text-primary" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="flex min-h-[4.25rem] items-center gap-2.5 px-4 py-3 text-base text-[#655c69] sm:px-5">
+          <Check aria-hidden className="size-4 shrink-0 text-[#557442]" />{due ? "ยังไม่มีงานที่ครบกำหนดในช่วงนี้" : "ไม่มีรายการค้างติดตาม"}
+        </p>
+      )}
+    </Card>
+  );
 }

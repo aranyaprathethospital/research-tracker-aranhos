@@ -79,14 +79,15 @@ export function UserEditorDialog({
   });
 
   return (
-    <Dialog open onOpenChange={onOpenChange}>
+    <Dialog open onOpenChange={(open) => { if (!isSaving) onOpenChange(open); }}>
       <DialogContent
         showCloseButton={false}
-        className="grid max-h-[92svh] w-[calc(100%-1rem)] max-w-none grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden rounded-[1.75rem] border border-[#e9e1ee] bg-white p-0 text-[#40364a] shadow-[0_28px_100px_rgba(47,29,62,.25)] sm:w-[calc(100%-3rem)] sm:max-w-4xl lg:max-w-5xl"
+        className="grid max-h-[92svh] w-[calc(100%-1rem)] max-w-none grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0 sm:w-[calc(100%-3rem)] sm:max-w-4xl lg:max-w-5xl"
       >
-        <div className="relative shrink-0 overflow-hidden border-b border-[#eee8f2] bg-white px-5 py-5 pr-14 sm:px-8 sm:py-6 sm:pr-16">
+        <div className="relative shrink-0 overflow-hidden border-b border-[#e7e0d9] bg-[#fffcf8] px-5 py-5 pr-14 sm:px-8 sm:py-6 sm:pr-16">
           <DialogClose
             aria-label="ปิดหน้าต่าง"
+            disabled={isSaving}
             className="absolute right-4 top-4 grid size-9 place-items-center rounded-xl border border-[#e8e1ec] bg-white/90 text-[#817888] shadow-sm transition hover:bg-[#f6f1f9] hover:text-[#5d3d79] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#85619c]/15"
           >
             <X className="size-4" />
@@ -98,7 +99,7 @@ export function UserEditorDialog({
                 <IdCard aria-hidden className="size-5" />
               </span>
               <div className="min-w-0">
-                <DialogTitle className="text-xl font-semibold tracking-tight text-[#382d43] sm:text-2xl">
+                <DialogTitle className="text-3xl font-bold tracking-tight text-[#382d43]">
                   {mode === "create" ? "เพิ่มผู้ใช้ใหม่" : "แก้ไขข้อมูลผู้ใช้"}
                 </DialogTitle>
                 <DialogDescription className="mt-1 text-sm leading-5 text-[#817888]">
@@ -116,7 +117,7 @@ export function UserEditorDialog({
           noValidate
           className="flex min-h-0 flex-1 flex-col"
         >
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-[#f8f6fa] px-4 py-4 sm:px-6 sm:py-6">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-[#f6f4f0] px-4 py-4 sm:px-6 sm:py-6">
             {saveError && (
               <div
                 role="alert"

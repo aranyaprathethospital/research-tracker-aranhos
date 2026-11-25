@@ -9,9 +9,10 @@ import { researchProjectScope } from "@/lib/research-access";
 import { getSignedInProfile } from "@/lib/server-access";
 import { redirect } from "next/navigation";
 import type { WorkspaceView } from "@/features/workspace/navigation";
+import type { ProjectFilter } from "@/features/research/project-filter";
 
-export default async function ResearchWorkspace({ view, stage, projectId, focusReview }: {
-  view: WorkspaceView; stage?: string; projectId?: string; focusReview?: boolean;
+export default async function ResearchWorkspace({ view, stage, filter, projectId, focusReview }: {
+  view: WorkspaceView; stage?: string; filter?: ProjectFilter; projectId?: string; focusReview?: boolean;
 }) {
   if (!isProviderIdConfigured()) redirect("/login?setup=1");
   const authContext = await getSignedInProfile();
@@ -31,7 +32,7 @@ export default async function ResearchWorkspace({ view, stage, projectId, focusR
   const manager = canManageProjects(profile.systemRole);
   const where = researchProjectScope(profile, activeMode);
   const isTeamView = view === "ทีม";
-  const [records, peerRecords, directory, navigationCounts] = await Promise.all([
+  const [records, peerRecords, directory, projectCount] = await Promise.all([
     isTeamView ? [] : prisma.researchProject.findMany({
       where,
       include: projectInclude(),
@@ -44,17 +45,14 @@ export default async function ResearchWorkspace({ view, stage, projectId, focusR
           orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
         })
       : null,
-    profile.systemRole === "PM"
+    profile.systemRole === "PM" && !isTeamView
       ? prisma.researchProfile.findMany({
           where: { active: true },
           select: { id: true, fullName: true, capabilities: { select: { capability: true } } },
           orderBy: { fullName: "asc" },
         })
       : [],
-    isTeamView ? Promise.all([
-      prisma.researchProject.count({ where }),
-      prisma.advisorComment.count({ where: { project: where } }),
-    ]) : null,
+    isTeamView ? prisma.researchProject.count({ where }) : undefined,
   ]);
   const activeRole =
     activeMode === "ADVISOR"
@@ -77,18 +75,19 @@ export default async function ResearchWorkspace({ view, stage, projectId, focusR
 
   return (
     <Dashboard
-      key={`${profile.id}:${activeMode ?? profile.systemRole}:${view}:${stage ?? ""}:${projectId ?? ""}:${focusReview ?? false}`}
+      key={`${profile.id}:${activeMode ?? profile.systemRole}:${view}:${stage ?? ""}:${filter ?? ""}:${projectId ?? ""}:${focusReview ?? false}`}
       projectId={projectId}
       focusReview={focusReview}
       alternateMode={canSwitch ? alternateMode : undefined}
       initialItems={records.map((record) => toResearchItem(record, activeMode === "ADVISOR" ? profile.id : undefined))}
       avatarUrl={profileFileHref(profile.id, "avatar", profile.avatarPath)}
-      navigationCounts={navigationCounts ?? undefined}
+      projectCount={projectCount}
       view={view}
       peerProjects={peerRecords?.map(({ id, title, stage: projectStage, advisee }) => ({
         id, title, stage: projectStage, progress: progressFromStage(projectStage), researcher: advisee.fullName,
       }))}
       initialStage={stage}
+      initialFilter={filter}
       role={activeRole}
       availableRoles={availableModes.map((mode) =>
         mode === "ADVISOR" ? "Advisor" : "Advisee",

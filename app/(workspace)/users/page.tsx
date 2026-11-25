@@ -44,13 +44,12 @@ async function UsersPageContent() {
   const availableModes = profile.capabilities.map((grant) => grant.capability);
   if (availableModes.length > 1 && !activeMode) redirect("/choose-role");
 
-  const [records, projectCount, commentCount] = await Promise.all([
+  const [records, projectCount] = await Promise.all([
     prisma.researchProfile.findMany({
       include: { capabilities: { select: { capability: true } } },
       orderBy: { fullName: "asc" },
     }),
     prisma.researchProject.count(),
-    prisma.advisorComment.count(),
   ]);
 
   const people: UserDirectoryPerson[] = records.map((person) => ({
@@ -90,7 +89,6 @@ async function UsersPageContent() {
       role={role}
       availableRoles={availableModes.map((mode) => mode === "ADVISOR" ? "Advisor" : "Advisee")}
       projectCount={projectCount}
-      commentCount={commentCount}
     />
   );
 }

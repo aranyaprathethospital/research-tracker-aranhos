@@ -13,8 +13,8 @@ export function TablePagination({ page, total, onPageChange }: {
   const end = Math.min(page * TABLE_PAGE_SIZE, total);
 
   return (
-    <nav aria-label="เปลี่ยนหน้าตาราง" className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-[#faf8fc] px-4 py-3 sm:px-5">
-      <p aria-live="polite" className="text-sm tabular-nums text-muted-foreground">แสดง {start}–{end} จาก {total} รายการ</p>
+    <nav aria-label="เปลี่ยนหน้าตาราง" className="flex flex-wrap items-center justify-between gap-3 border-t border-[#e7e0d9] bg-[#fbf8f5] px-4 py-3 sm:px-5">
+      <p aria-live="polite" className="text-base tabular-nums text-muted-foreground">แสดง {start}–{end} จาก {total} รายการ</p>
       {pages > 1 && (
         <div className="flex items-center gap-2">
           <Button type="button" variant="outline" size="sm" disabled={page <= 1} onClick={() => onPageChange(page - 1)} aria-label="หน้าก่อนหน้า"><ChevronLeft /></Button>

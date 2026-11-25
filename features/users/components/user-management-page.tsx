@@ -8,7 +8,7 @@ import {
   UserCheck,
   UsersRound,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import PageHeading from "@/features/workspace/components/page-heading";
 import WorkspaceShell from "@/features/workspace/components/workspace-shell";
 import UserDirectory from "@/features/users/components/user-directory";
@@ -24,7 +24,6 @@ type UserManagementPageProps = {
   role: Role;
   availableRoles: Role[];
   projectCount: number;
-  commentCount: number;
 };
 
 export default function UserManagementPage({
@@ -36,7 +35,6 @@ export default function UserManagementPage({
   role,
   availableRoles,
   projectCount,
-  commentCount,
 }: UserManagementPageProps) {
   const [people, setPeople] = useState(initialPeople);
 
@@ -54,7 +52,6 @@ export default function UserManagementPage({
       systemRole={systemRole}
       availableRoles={availableRoles}
       projectCount={projectCount}
-      commentCount={commentCount}
     >
       <PageHeading
         eyebrow={<span className="inline-flex items-center gap-2"><ShieldCheck className="size-4" />ศูนย์จัดการระบบ</span>}
@@ -64,27 +61,14 @@ export default function UserManagementPage({
           : "ลงทะเบียนผู้ใช้และจัดการสิทธิ์ Advisor/Advisee สำหรับทีมวิจัย"}
       />
 
-      <section aria-label="สรุปบัญชีผู้ใช้" className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+      <Card role="region" aria-label="สรุปบัญชีผู้ใช้" className="mb-5 grid grid-cols-2 divide-[#e7e0d9] bg-[#fffcf8] xl:grid-cols-4 xl:divide-x">
         <SummaryCard icon={UsersRound} label="ผู้ใช้ทั้งหมด" value={people.length} detail="รายการในระบบ" tone="violet" />
         <SummaryCard icon={UserCheck} label="เปิดใช้งาน" value={activeAccounts} detail="เข้าสู่ระบบได้" tone="green" />
         <SummaryCard icon={BadgeCheck} label="เชื่อม ProviderID" value={linkedAccounts} detail="เคยเข้าสู่ระบบแล้ว" tone="blue" />
         <SummaryCard icon={KeyRound} label="รอเชื่อมบัญชี" value={pendingAccounts} detail="ยังไม่เข้า ProviderID" tone="amber" />
-      </section>
-
-      <div className="mb-5 flex items-start gap-3 rounded-xl border border-[#e9e7ed] bg-white px-4 py-3.5 text-sm leading-6 text-[#6f6878]">
-        <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg bg-[#f2eef6] text-[#704b8d]"><ShieldCheck className="size-4" /></span>
-        <p>
-          {canAssignSystemRole
-            ? "Superadmin สามารถกำหนดบทบาทระบบ PM/Superadmin ได้ ส่วน PM จัดการบัญชีผู้ใช้ทั่วไปและความสามารถ Advisor/Advisee"
-            : "PM จัดการบัญชีผู้ใช้ทั่วไปและความสามารถ Advisor/Advisee ได้ การกำหนดบทบาท PM หรือ Superadmin ทำโดย Superadmin"}
-        </p>
-      </div>
+      </Card>
 
       <UserDirectory people={people} onChange={setPeople} canAssignSystemRole={canAssignSystemRole} currentProfileId={currentProfileId} />
-      <footer className="mt-7 hidden items-center justify-between border-t border-[#e8e6ec] pt-5 text-sm text-[#8a8292] sm:flex">
-        <span>Research Tracker · จัดการบัญชีผู้ใช้</span>
-        <span>ตรวจสิทธิ์จากบัญชี {systemRole === "SUPERADMIN" ? "Superadmin" : "PM"}</span>
-      </footer>
     </WorkspaceShell>
   );
 }
@@ -110,15 +94,13 @@ function SummaryCard({
   };
 
   return (
-    <Card className="rounded-2xl border-[#e9e4ed] shadow-sm shadow-[#40304c]/[.025] transition duration-200 hover:-translate-y-0.5 hover:shadow-md hover:shadow-[#40304c]/[.06] motion-reduce:transition-none">
-      <CardContent className="p-4 sm:p-5">
+    <div className="border-[#e7e0d9] p-4 first:border-r second:border-b nth-3:border-r nth-3:border-t sm:p-5 xl:border-0">
         <div className="flex items-start justify-between gap-2">
-          <span className={`grid size-10 place-items-center rounded-xl ${tones[tone]}`}><Icon className="size-[18px]" /></span>
-          <span className="text-2xl font-semibold tabular-nums tracking-tight text-[#362a40] sm:text-3xl">{String(value).padStart(2, "0")}</span>
+          <span aria-hidden className={`grid size-9 place-items-center rounded-lg ${tones[tone]}`}><Icon className="size-[18px]" /></span>
+          <span className="text-4xl font-bold leading-none tabular-nums text-[#362a40]">{value}</span>
         </div>
-        <p className="mt-3 text-sm font-semibold text-[#51465c]">{label}</p>
-        <p className="mt-1 text-xs text-[#8b8292]">{detail}</p>
-      </CardContent>
-    </Card>
+        <p className="mt-3 text-lg font-bold leading-tight text-[#51465c]">{label}</p>
+        <p className="text-base text-muted-foreground">{detail}</p>
+    </div>
   );
 }

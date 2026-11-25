@@ -25,9 +25,9 @@ function TextBlock({ label, value }: { label: string; value: string }) {
 
 export default function ProjectReport({ project, code }: { project: Research; code: string }) {
   return (
-    <main className="min-h-svh bg-[#f7f3f9] px-3 py-5 sm:px-6 print:min-h-0 print:bg-white print:p-0">
+    <main className="min-h-svh bg-[#f6f4f0] px-3 py-5 sm:px-6 print:min-h-0 print:bg-white print:p-0">
       <ProjectReportActions projectId={project.id} />
-      <article className="mx-auto w-full max-w-[210mm] rounded-2xl border border-border bg-white p-5 text-lg leading-snug text-[#29232e] shadow-sm sm:p-10 print:max-w-none print:rounded-none print:border-0 print:p-0 print:text-[12pt] print:shadow-none">
+      <article className="mx-auto w-full max-w-[210mm] rounded-lg border border-[#e7e0d9] bg-white p-5 text-lg leading-snug text-[#29232e] shadow-sm sm:p-10 print:max-w-none print:rounded-none print:border-0 print:p-0 print:text-[12pt] print:shadow-none">
         <header className="break-inside-avoid border-b-2 border-[#745491] pb-4">
           <Image src="/images/branding/logo-horizontal.png.png" width={240} height={80} alt="Research Tracker" loading="eager" data-report-logo className="mb-3 h-auto w-44" />
           <p className="font-bold text-[#654681]">รายงานความก้าวหน้างานวิจัย · {code}</p>

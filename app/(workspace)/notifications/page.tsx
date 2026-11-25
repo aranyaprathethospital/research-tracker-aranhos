@@ -8,6 +8,7 @@ import { getSignedInProfile } from "@/lib/server-access";
 import { profileFileHref } from "@/lib/storage";
 import { canManageProjects } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
+import PageHeading from "@/features/workspace/components/page-heading";
 
 export default function NotificationsPage() {
   return (
@@ -25,18 +26,16 @@ async function NotificationsContent() {
   const where = canManageProjects(profile.systemRole) ? {}
     : activeMode === "ADVISOR" ? { advisors: { some: { advisorId: profile.id } } }
     : { adviseeId: profile.id };
-  const [projectCount, commentCount] = await Promise.all([
-    prisma.researchProject.count({ where }),
-    prisma.advisorComment.count({ where: { project: where } }),
-  ]);
+  const projectCount = await prisma.researchProject.count({ where });
 
   return (
     <WorkspaceShell activeItem="การแจ้งเตือน" personName={profile.fullName}
       avatarUrl={profileFileHref(profile.id, "avatar", profile.avatarPath)}
       role={activeMode === "ADVISOR" ? "Advisor" : activeMode === "ADVISEE" ? "Advisee" : profile.systemRole === "SUPERADMIN" ? "Superadmin" : "PM"}
       systemRole={profile.systemRole} availableRoles={profile.capabilities.map(({ capability }) => capability === "ADVISOR" ? "Advisor" : "Advisee")}
-      projectCount={projectCount} commentCount={commentCount}>
-      <div className="mx-auto max-w-3xl rounded-2xl border border-border"><NotificationFeed /></div>
+      projectCount={projectCount}>
+      <PageHeading title="การแจ้งเตือน" description="ติดตามการมอบหมายโครงการ สถานะการตรวจ และความเห็นใหม่" />
+      <div className="overflow-hidden rounded-xl border border-[#e7e0d9]"><NotificationFeed /></div>
     </WorkspaceShell>
   );
 }

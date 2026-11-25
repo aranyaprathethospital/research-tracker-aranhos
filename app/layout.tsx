@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="th" className={`${sarabun.variable} font-sans`}>
-      <body className="min-h-[100svh] bg-[#f6f7fb] text-[#282239] antialiased [&_[data-sonner-toaster]]:font-sans!">
+      <body className="min-h-svh bg-[#f6f4f0] text-foreground antialiased [&_[data-sonner-toaster]]:font-sans!">
         <Toaster position="bottom-right" theme="light" richColors closeButton />
         {children}
       </body>

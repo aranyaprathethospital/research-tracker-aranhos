@@ -6,7 +6,7 @@ import ErrorStatus, { type ErrorStatusProps } from "@/components/status/error-st
 
 export default function GlobalError(props: ErrorStatusProps) {
   return <html lang="th" className={`${sarabun.variable} font-sans`}>
-    <body className="bg-[#f7f3fa] text-foreground antialiased">
+    <body className="bg-[#f6f4f0] text-foreground antialiased">
       <title>เกิดข้อผิดพลาดของระบบ | Research Tracker</title>
       <ErrorStatus {...props} />
     </body>

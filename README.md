@@ -160,7 +160,7 @@ Remove-Item Env:BOOTSTRAP_SUPERADMIN_CID, Env:BOOTSTRAP_SUPERADMIN_NAME
 2. ผู้ใช้เข้าสู่ระบบผ่าน ProviderID; CID ที่ MOPH ส่งกลับต้องจับคู่กับ profile ที่ลงทะเบียนและยัง active อยู่ ระบบไม่สร้างบัญชีให้อัตโนมัติ
 3. หลัง ProviderID เชื่อมบัญชีสำเร็จ ผู้ใช้ตั้งอีเมลและรหัสผ่านสำรองได้ที่ `/account/setup` รหัสผ่านขั้นต่ำ 6 ตัวอักษรและสูงสุด 128 ตัวอักษร
 4. ครั้งถัดไปใช้ ProviderID หรืออีเมล/รหัสผ่านสำรองได้ หากลืมรหัสผ่านให้ PM/Superadmin ออก temporary password ตาม workflow ใน user directory และผู้ใช้ต้องเปลี่ยนรหัสผ่านเมื่อเข้าสู่ระบบ
-5. ผู้ใช้ที่มีทั้ง Advisor และ Advisee เลือกโหมดได้ที่ `/choose-role`; การเลือกนี้เปลี่ยนบริบทงานของ session แต่ไม่เพิ่มสิทธิ์ใหม่
+5. ผู้ใช้ที่มีทั้ง Advisor และ Advisee เลือกโหมดได้ที่ `/choose-role` และสลับโหมดจากเมนูโปรไฟล์ระหว่างใช้งาน การเลือกนี้เปลี่ยนบริบทงานของ session
 
 ## Supabase Storage
 
@@ -186,6 +186,12 @@ CID จริงไม่ถูกเก็บใน `ResearchProfile`; ระ�
 | `/account/password` | ตั้งหรือเปลี่ยนรหัสผ่าน |
 | `/choose-role` | เลือก Advisor/Advisee เมื่อได้รับทั้งสองความสามารถ |
 | `/` | dashboard/workspace หลังเข้าสู่ระบบ |
+| `/projects` | ค้นหาและจัดการโครงการ ลิงก์จากภาพรวมระบุ `?stage=` หรือ `?filter=due` และ `?filter=attention` ได้ |
+| `/comments` | อ่านและค้นหาความเห็นล่าสุด พร้อมเปิดรายละเอียดโครงการ |
+| `/team` | ค้นหาสมาชิกตามชื่อ ตำแหน่ง และกลุ่มงาน |
+| `/notifications` | ดูการแจ้งเตือนและเปิดโครงการจากกิจกรรม |
+| `/advisors` | สรุปภาระงานที่ปรึกษาหลักสำหรับ PM |
+| `/users` | จัดการบัญชีและสิทธิ์สำหรับ PM และ Superadmin |
 | `/profile` | ดูและแก้ไขข้อมูลส่วนตัว |
 
 API handlers อยู่ใต้ `app/api/` สำหรับ auth, account, profile, media, users, team และ projects โดยแต่ละ handler ต้องตรวจ session และสิทธิ์บน server

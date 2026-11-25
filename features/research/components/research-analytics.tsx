@@ -17,12 +17,12 @@ function ChartPanel({ icon, title, description, children }: {
   children: ReactNode;
 }) {
   return (
-    <section className="min-w-0 rounded-2xl border border-border bg-white p-4 sm:p-6">
-      <div className="mb-5 flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-secondary text-primary">{icon}</span>
+    <section className="min-w-0 rounded-xl border border-[#e7e0d9] bg-white p-4 sm:p-6">
+      <div className="mb-4 flex items-start gap-3 border-b border-[#eee8e2] pb-3">
+        <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-lg bg-secondary text-primary">{icon}</span>
         <div>
-          <h2 className="font-semibold text-foreground">{title}</h2>
-          <p className="mt-1 text-sm leading-5 text-muted-foreground">{description}</p>
+          <h3 className="text-xl font-bold leading-tight">{title}</h3>
+          <p className="text-base leading-snug text-muted-foreground">{description}</p>
         </div>
       </div>
       {children}
@@ -72,8 +72,8 @@ export default function ResearchAnalytics({ items, onSelectStage }: {
         <div className="space-y-1">
           {stageCounts.map(({ name, count }, index) => (
             <button type="button" key={name} onClick={() => onSelectStage(index)} className="group block w-full rounded-lg p-2 text-left hover:bg-secondary/50 focus-visible:outline-2 focus-visible:outline-primary">
-              <span className="mb-1.5 flex items-center justify-between gap-3 text-sm">
-                <span className="min-w-0 font-medium text-foreground">{name}</span>
+              <span className="mb-1.5 flex items-center justify-between gap-3 text-base">
+                <span className="min-w-0 font-bold text-foreground">{name}</span>
                 <span className="flex shrink-0 items-center gap-2 tabular-nums text-muted-foreground">{count} โครงการ <ArrowUpRight aria-hidden className="size-3.5 text-primary" /></span>
               </span>
               <progress aria-hidden="true" value={count} max={total} className="block h-2 w-full appearance-none overflow-hidden rounded-full bg-secondary [&::-moz-progress-bar]:rounded-full [&::-moz-progress-bar]:bg-primary [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-bar]:bg-secondary [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-primary" />

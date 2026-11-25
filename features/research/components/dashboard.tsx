@@ -3,33 +3,36 @@
 import ConnectionStatus from "@/components/status/connection-status";
 import StatusPanel, { StatusLink } from "@/components/status/status-panel";
 import { workspaceFetch } from "@/lib/workspace-fetch";
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
-import { th } from "date-fns/locale";
-import { ArrowRight, BookOpenCheck, CalendarDays, CircleAlert, Clock3, Plus, Users } from "lucide-react";
+import dynamic from "next/dynamic";
+import Link from "next/link";
+import { ArrowRight, BookOpenCheck, CalendarDays, CircleAlert, Clock3, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { type Research, type Role } from "@/lib/research-types";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import TeamDirectory, { type TeamMember } from "@/features/team/components/team-directory";
 import PageHeading from "@/features/workspace/components/page-heading";
 import WorkspaceShell from "@/features/workspace/components/workspace-shell";
 import type { ResearchPersonOption } from "@/features/users/types";
 import { dayDiff } from "./project-display";
 import { type ResearchChanges, type ProjectInput } from "./project-dialog-types";
-import ResearchAnalytics from "./research-analytics";
 import PeerProgress, { type PeerProject } from "./peer-progress";
 import { ProjectList } from "./project-list";
 import { MetricCard, DeadlinePanel, AttentionPanel } from "./research-overview-panels";
 import { CreateProjectDialog } from "./create-project-dialog";
 import { ProjectDialog } from "./project-dialog";
+import { ResearchComments } from "./research-comments";
+import type { ProjectFilter } from "@/features/research/project-filter";
+import type { WorkspaceView } from "@/features/workspace/navigation";
 
-import { workspaceHref, type WorkspaceView } from "@/features/workspace/navigation";
+const ResearchAnalytics = dynamic(() => import("./research-analytics"), {
+  loading: () => <div role="status" className="mb-6 rounded-xl border border-[#e7e0d9] bg-white p-5 text-base text-muted-foreground">กำลังโหลดสถิติ…</div>,
+});
 
-type DashboardProps = { view: WorkspaceView; projectId?: string; focusReview?: boolean; alternateMode?: "ADVISOR" | "ADVISEE"; initialStage?: string; initialItems: Research[]; avatarUrl: string | null; navigationCounts?: readonly [number, number]; peerProjects?: PeerProject[]; role: Role; availableRoles: Role[]; systemRole: string; personName: string; currentProfileId: string; directory: ResearchPersonOption[] };
+type DashboardProps = { view: WorkspaceView; projectId?: string; focusReview?: boolean; alternateMode?: "ADVISOR" | "ADVISEE"; initialStage?: string; initialFilter?: ProjectFilter; initialItems: Research[]; avatarUrl: string | null; projectCount?: number; peerProjects?: PeerProject[]; role: Role; availableRoles: Role[]; systemRole: string; personName: string; currentProfileId: string; directory: ResearchPersonOption[] };
 
-export default function Dashboard({ view: active, projectId, focusReview, alternateMode, initialStage, initialItems, avatarUrl, navigationCounts, peerProjects, role, availableRoles, systemRole, personName, currentProfileId, directory }: DashboardProps) {
+export default function Dashboard({ view: active, projectId, focusReview, alternateMode, initialStage, initialFilter = "all", initialItems, avatarUrl, projectCount, peerProjects, role, availableRoles, systemRole, personName, currentProfileId, directory }: DashboardProps) {
   const router = useRouter();
   const [items, setItems] = useState<Research[]>(initialItems);
   const people = directory;
@@ -37,19 +40,24 @@ export default function Dashboard({ view: active, projectId, focusReview, altern
   const [team, setTeam] = useState<TeamMember[] | null>(null);
   const person = personName;
   const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
   const [stageFilter, setStageFilter] = useState(initialStage ?? "ทั้งหมด");
+  const [projectFilter, setProjectFilter] = useState(initialFilter);
   const [selected, setSelected] = useState<string | null>(projectId ?? null);
   const [switchingMode, setSwitchingMode] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [showAllDeadlines, setShowAllDeadlines] = useState(false);
 
   const isManager = role === "PM" || role === "Superadmin" || systemRole === "PM" || systemRole === "SUPERADMIN";
   const selectedItem = items.find((item) => item.id === selected) ?? null;
-  const visible = useMemo(() => items.filter((item) => isManager || (role === "Advisor" ? item.advisor.includes(person) : item.student === person)), [items, role, person, isManager]);
-  const filtered = useMemo(() => visible.filter((item) => (stageFilter === "ทั้งหมด" || item.stage === Number(stageFilter)) && `${item.title} ${item.student} ${item.id} ${item.faculty} ${item.advisor.join(" ")}`.toLocaleLowerCase().includes(query.toLocaleLowerCase())), [visible, query, stageFilter]);
-  const deadlines = visible.filter((item) => dayDiff(item.dueDate) <= 14).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-  const attention = visible.filter((item) => item.issue || item.review === "ขอแก้ไข" || dayDiff(item.dueDate) < 0);
-  const todayLabel = format(new Date(), "EEEE d MMMM yyyy", { locale: th });
+  const overview = active === "ภาพรวม";
+  const deadlines = useMemo(() => items.filter(isDueSoon).sort((a, b) => a.dueDate.localeCompare(b.dueDate)), [items]);
+  const attention = useMemo(() => items.filter(needsAttention), [items]);
+  const filtered = useMemo(() => {
+    const source = projectFilter === "due" ? deadlines : projectFilter === "attention" ? attention : items;
+    const search = deferredQuery.trim().toLocaleLowerCase();
+    return source.filter((item) => (stageFilter === "ทั้งหมด" || item.stage === Number(stageFilter))
+      && (!search || `${item.title} ${item.student} ${item.id} ${item.faculty} ${item.advisor.join(" ")}`.toLocaleLowerCase().includes(search)));
+  }, [attention, deadlines, deferredQuery, items, projectFilter, stageFilter]);
 
   useEffect(() => {
     if (active !== "ทีม" || team !== null || teamFailed) return;
@@ -64,7 +72,7 @@ export default function Dashboard({ view: active, projectId, focusReview, altern
     return () => { cancelled = true; };
   }, [active, team, teamFailed]);
 
-  const updateProject = (id: string, updates: ResearchChanges, description: string) => {
+  const updateProject = async (id: string, updates: ResearchChanges, description: string) => {
     const date = new Date().toISOString();
     const fields = { ...updates };
     const comment = fields.comments?.[0]?.text;
@@ -76,16 +84,15 @@ export default function Dashboard({ view: active, projectId, focusReview, altern
     const secondaryAdvisorIds = fields.secondaryAdvisorIds;
     delete fields.primaryAdvisorId;
     delete fields.secondaryAdvisorIds;
-    void workspaceFetch("/api/projects", {
+    const response = await workspaceFetch("/api/projects", {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, ...fields, ...(primaryAdvisorId ? { primaryAdvisorId } : {}), ...(secondaryAdvisorIds ? { secondaryAdvisorIds } : {}), ...(comment ? { comment } : {}) }),
-    }).then(async (response) => {
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error ?? "บันทึกไม่สำเร็จ");
-      if (result.project) setItems((current) => current.map((item) => item.id === id ? result.project as Research : item));
-      else setItems((current) => current.map((item) => item.id === id ? { ...item, ...fields, ...(comment ? { comments: [{ text: comment, date, by: person }, ...item.comments] } : {}), updatedAt: date, history: [{ text: description, date, by: person }, ...item.history] } : item));
-      toast.success("บันทึกการเปลี่ยนแปลงแล้ว");
-    }).catch((error: unknown) => toast.error(error instanceof Error ? error.message : "บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง"));
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error ?? "บันทึกไม่สำเร็จ");
+    if (result.project) setItems((current) => current.map((item) => item.id === id ? result.project as Research : item));
+    else setItems((current) => current.map((item) => item.id === id ? { ...item, ...fields, ...(comment ? { comments: [{ text: comment, date, by: person }, ...item.comments] } : {}), updatedAt: date, history: [{ text: description, date, by: person }, ...item.history] } : item));
+    toast.success("บันทึกการเปลี่ยนแปลงแล้ว");
   };
 
   const createProject = async (project: ProjectInput) => {
@@ -97,12 +104,17 @@ export default function Dashboard({ view: active, projectId, focusReview, altern
       if (!response.ok) throw new Error(result.error ?? "สร้างรายการไม่สำเร็จ");
       setItems((current) => [result.project as Research, ...current]);
       setCreating(false);
-      if (active !== "งานวิจัย") router.push("/projects");
+      if (active !== "งานวิจัย" || projectFilter !== "all" || stageFilter !== "ทั้งหมด" || query.trim()) {
+        setProjectFilter("all");
+        setStageFilter("ทั้งหมด");
+        setQuery("");
+        router.push(`/projects?project=${encodeURIComponent(result.project.id)}`);
+      } else {
+        setSelected(result.project.id);
+      }
       toast.success("เพิ่มงานวิจัยแล้ว");
     }).catch((error: unknown) => toast.error(error instanceof Error ? error.message : "สร้างรายการไม่สำเร็จ ตรวจสอบข้อมูลและสิทธิ์ PM"));
   };
-
-  const changeActive = (value: string) => router.push(workspaceHref(value));
 
   return (
     <WorkspaceShell
@@ -112,15 +124,13 @@ export default function Dashboard({ view: active, projectId, focusReview, altern
       role={role}
       systemRole={systemRole}
       availableRoles={availableRoles}
-      projectCount={navigationCounts?.[0] ?? visible.length}
-      commentCount={navigationCounts?.[1] ?? visible.reduce((count, item) => count + item.comments.length, 0)}
-      onNavigate={changeActive}
+      projectCount={projectCount ?? items.length}
     >
       <PageHeading
-        eyebrow={todayLabel}
+        eyebrow={overview ? (isManager ? "การจัดการงานวิจัย" : role === "Advisor" ? "พื้นที่ของที่ปรึกษา" : "พื้นที่ของนักวิจัย") : undefined}
         title={heading(active)}
         description={description(active, isManager, role)}
-        action={systemRole === "PM" ? <Button onClick={() => setCreating(true)} className="h-11 rounded-lg px-4"><Plus className="size-4" />เพิ่มงานวิจัย</Button> : undefined}
+        action={systemRole === "PM" && active !== "ทีม" && active !== "ความเห็น" ? <Button size="lg" onClick={() => setCreating(true)}><Plus aria-hidden />เพิ่มงานวิจัย</Button> : undefined}
       />
       {projectId && selected === projectId && !selectedItem && (
         <StatusPanel embedded kind={alternateMode ? "mode" : "missing"}
@@ -141,37 +151,58 @@ export default function Dashboard({ view: active, projectId, focusReview, altern
         </StatusPanel>
       )}
 
-      {active !== "ทีม" && <>
-        <section aria-label="สรุปงานวิจัย" className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-          <MetricCard title="งานวิจัยทั้งหมด" value={visible.length} detail="รายการที่อยู่ในระบบ" icon={BookOpenCheck} tone="violet" />
-          <MetricCard title="กำลังดำเนินการ" value={visible.filter((item) => item.stage > 0 && item.stage < 7).length} detail="อยู่ระหว่างทำวิจัย" icon={Clock3} tone="blue" />
-          <MetricCard title="ใกล้ถึงกำหนดส่ง" value={deadlines.filter((item) => dayDiff(item.dueDate) >= 0).length} detail="ภายใน 14 วัน" icon={CalendarDays} tone="green" />
-          <MetricCard title="ต้องติดตาม" value={attention.length} detail="มีเรื่องรอการดูแล" icon={CircleAlert} tone="rose" />
+      {overview && <>
+        <section aria-label="สรุปงานวิจัย" className="mb-5 grid grid-cols-2 overflow-hidden rounded-xl border border-[#e6dfd9] bg-[#fffcf8] divide-[#e6dfd9] xl:mb-6 xl:grid-cols-4 xl:divide-x">
+          <MetricCard title="งานวิจัยทั้งหมด" value={items.length} icon={BookOpenCheck} tone="violet" href="/projects" />
+          <MetricCard title="กำลังดำเนินการ" value={items.filter((item) => item.progress > 0 && item.progress < 100).length} icon={Clock3} tone="blue" />
+          <MetricCard title="ใกล้กำหนดส่ง" value={deadlines.length} icon={CalendarDays} tone="green" href="/projects?filter=due" />
+          <MetricCard title="ต้องติดตาม" value={attention.length} icon={CircleAlert} tone="rose" href="/projects?filter=attention" />
         </section>
-
-        {active === "ภาพรวม" && <ResearchAnalytics items={visible} onSelectStage={(stage) => {
-          router.push(`/projects?stage=${stage}`);
-        }} />}
+        <section aria-label="งานที่ต้องดูแล" className="mb-6 grid items-start gap-4 md:grid-cols-2 lg:gap-5">
+          <DeadlinePanel items={deadlines.slice(0, 4)} total={deadlines.length} onSelect={setSelected} />
+          <AttentionPanel items={attention.slice(0, 4)} total={attention.length} onSelect={setSelected} />
+        </section>
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-2 border-b border-[#ded8d1] pb-3">
+          <h2 className="text-3xl font-bold leading-none">สถิติและความคืบหน้า</h2>
+          <Link href="/projects" className="inline-flex min-h-9 items-center gap-2 rounded-md font-bold text-primary hover:underline focus-visible:outline-2 focus-visible:outline-primary">เปิดรายการงานวิจัย <ArrowRight aria-hidden className="size-4" /></Link>
+        </div>
+        <ResearchAnalytics items={items} onSelectStage={(stage) => router.push(`/projects?stage=${stage}`)} />
+        {peerProjects && <PeerProgress projects={peerProjects} />}
       </>}
 
-      {peerProjects && <PeerProgress projects={peerProjects} />}
-      {active === "ทีม" ? (teamFailed ? <ConnectionStatus retry={() => setTeamFailed(false)} /> : <TeamDirectory people={team ?? []} loading={team === null} />) :
-        <div className="grid items-start gap-5 2xl:grid-cols-[minmax(0,1fr)_340px]">
-          <ProjectList items={filtered} active={active} query={query} stageFilter={stageFilter} onQueryChange={setQuery} onStageChange={setStageFilter} onSelect={setSelected} />
-          <aside className="grid gap-5 md:grid-cols-2 2xl:grid-cols-1">
-            <DeadlinePanel items={showAllDeadlines ? deadlines : deadlines.slice(0, 4)} total={deadlines.length} expanded={showAllDeadlines} onToggle={() => setShowAllDeadlines((value) => !value)} onSelect={setSelected} onViewAll={() => changeActive("งานวิจัย")} />
-            <AttentionPanel items={attention.slice(0, 4)} total={attention.length} onSelect={setSelected} onViewAll={() => { changeActive("งานวิจัย"); setQuery(""); }} />
-            {isManager && <Card className="rounded-2xl border-[#e9e7ed] bg-[#f5f2f8] shadow-none"><CardContent className="flex items-start gap-3 p-5"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-[#704b8d]"><Users className="size-5" /></span><div><h2 className="text-base font-semibold text-[#42364d]">บัญชีเข้าใช้งาน</h2><p className="mt-1 text-sm leading-6 text-[#756d7e]">ลงทะเบียน CID และกำหนดบทบาทก่อนเริ่มใช้งาน</p><Button variant="ghost" className="mt-2 h-10 px-0 text-[#694786]" onClick={() => changeActive("จัดการผู้ใช้")}>จัดการผู้ใช้ <ArrowRight className="size-4" /></Button></div></CardContent></Card>}
-          </aside>
-        </div>}
-      <footer className="mt-8 hidden items-center justify-between border-t border-[#e8e6ec] pt-5 text-sm text-[#8a8292] sm:flex"><span>Research Tracker · ระบบติดตามความก้าวหน้างานวิจัย</span><span>พื้นที่ทำงานส่วนบุคคล</span></footer>
+      {active === "ทีม" && (teamFailed ? <ConnectionStatus retry={() => setTeamFailed(false)} /> : <TeamDirectory people={team ?? []} loading={team === null} />)}
+      {active === "งานวิจัย" && <ProjectList items={filtered} total={items.length} query={query} stageFilter={stageFilter} filter={projectFilter} filtering={query !== deferredQuery} onQueryChange={setQuery} onStageChange={setStageFilter} onFilterChange={setProjectFilter} onSelect={setSelected} />}
+      {active === "ความเห็น" && <ResearchComments items={items} onSelect={setSelected} />}
 
-      <ProjectDialog key={selectedItem?.id ?? "closed"} item={selectedItem} focusReview={Boolean(focusReview && selected === projectId)} role={role} systemRole={systemRole} currentProfileId={currentProfileId} onTitleUpdate={(project) => setItems((current) => current.map((entry) => entry.id === project.id ? { ...entry, title: project.title, titleVersion: project.titleVersion, titleHistory: project.titleHistory } : entry))} person={person} people={people} onClose={() => { setSelected(null); if (projectId) router.replace("/projects", { scroll: false }); }} onSave={updateProject} />
+      {selectedItem && <ProjectDialog key={selectedItem.id} item={selectedItem} focusReview={active === "ความเห็น" || Boolean(focusReview && selected === projectId)} role={role} systemRole={systemRole} currentProfileId={currentProfileId} onTitleUpdate={(project) => setItems((current) => current.map((entry) => entry.id === project.id ? { ...entry, title: project.title, titleVersion: project.titleVersion, titleHistory: project.titleHistory } : entry))} person={person} people={people} onClose={() => {
+        setSelected(null);
+        if (projectId) {
+          const params = new URLSearchParams();
+          if (initialStage) params.set("stage", initialStage);
+          if (initialFilter !== "all") params.set("filter", initialFilter);
+          router.replace(params.size ? `/projects?${params}` : "/projects", { scroll: false });
+        }
+      }} onSave={updateProject} />}
       {creating && <CreateProjectDialog open people={people} onOpenChange={setCreating} onCreate={createProject} />}
     </WorkspaceShell>
   );
 }
 
-function heading(active: string) { return active === "ภาพรวม" ? "ภาพรวมงานวิจัย" : active === "งานวิจัย" ? "งานวิจัยทั้งหมด" : active === "ความเห็น" ? "ความเห็นจากที่ปรึกษา" : active === "ทีม" ? "รายชื่อทีมวิจัย" : "จัดการผู้ใช้และสิทธิ์"; }
+function heading(active: WorkspaceView) { return active === "ภาพรวม" ? "ภาพรวมงานวิจัย" : active === "งานวิจัย" ? "งานวิจัย" : active === "ความเห็น" ? "ความเห็นจากที่ปรึกษา" : "ทีมวิจัย"; }
 
-function description(active: string, isManager: boolean, role: Role) { return active === "ทีม" ? "ดูชื่อ บทบาท และข้อมูลโปรไฟล์ของสมาชิกในทีม" : active === "จัดการผู้ใช้" ? "จัดการ CID บทบาท และข้อมูลที่จำเป็นสำหรับการเข้าใช้งาน" : isManager ? "ติดตามความก้าวหน้า กำหนดส่ง และประเด็นที่ต้องดูแลในพื้นที่เดียว" : role === "Advisor" ? "งานวิจัยที่มอบหมายและความเห็นที่รอการติดตาม" : "ความคืบหน้าและรายการที่ต้องทำของคุณ"; }
+function description(active: WorkspaceView, isManager: boolean, role: Role) {
+  if (active === "ทีม") return "ค้นหาสมาชิกและดูบทบาทในทีม";
+  if (active === "ความเห็น") return "อ่านข้อเสนอแนะล่าสุด แล้วเปิดโครงการเพื่อดูบริบทและประวัติ";
+  if (active === "งานวิจัย") return isManager ? "ค้นหา จัดการ และติดตามโครงการแยกตามขั้นตอน" : role === "Advisor" ? "โครงการที่คุณดูแลในฐานะที่ปรึกษา" : "โครงการและความคืบหน้าของคุณ";
+  return isManager ? "ติดตามกำหนดส่ง โครงการที่ต้องดูแล และภาพรวมของทีม" : role === "Advisor" ? "ดูงานที่ได้รับมอบหมายและรายการที่ต้องติดตาม" : "ดูกำหนดส่ง ความคืบหน้า และประเด็นที่ต้องดำเนินการ";
+}
+
+function isDueSoon(item: Research) {
+  if (item.progress >= 100 || !item.dueDate) return false;
+  const days = dayDiff(item.dueDate);
+  return days >= 0 && days <= 14;
+}
+
+function needsAttention(item: Research) {
+  return Boolean(item.issue || item.review === "ขอแก้ไข" || (item.progress < 100 && item.dueDate && dayDiff(item.dueDate) < 0));
+}

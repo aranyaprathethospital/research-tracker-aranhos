@@ -1,9 +1,12 @@
+import { useState } from "react";
 import Image from "next/image";
-import { BriefcaseBusiness, Building2, ShieldCheck, Users } from "lucide-react";
+import { BriefcaseBusiness, Building2, ChevronDown, Search, ShieldCheck, Users } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { TablePagination, TABLE_PAGE_SIZE } from "@/components/ui/table-pagination";
 
 export type TeamMember = {
   id: string;
@@ -22,27 +25,35 @@ const capabilityNames: Record<string, string> = { ADVISEE: "Advisee · นัก
 const systemRoleNames: Record<string, string> = { USER: "ผู้ใช้ทั่วไป", PM: "PM", SUPERADMIN: "Superadmin" };
 
 export default function TeamDirectory({ people, loading = false }: { people: TeamMember[]; loading?: boolean }) {
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const search = query.trim().toLocaleLowerCase();
+  const filtered = search ? people.filter((person) => [person.name, person.position, person.positionLevel, person.mission, person.workGroup].some((value) => value?.toLocaleLowerCase().includes(search))) : people;
+  const offset = (page - 1) * TABLE_PAGE_SIZE;
   return (
     <section className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="flex items-center gap-2 text-sm text-[#787280]"><Users className="size-4 text-[#74558f]" />สมาชิกที่ได้รับสิทธิ์ใช้งานพื้นที่นี้</p>
-        <Badge variant="outline" className="h-8 rounded-full border-[#e8e5ec] bg-white px-3 text-sm font-medium text-[#655d6d]">{loading ? "กำลังโหลด…" : `${people.length} คน`}</Badge>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e7e0d9] bg-white p-4">
+        <p aria-live="polite" className="flex items-center gap-2 text-lg font-bold"><Users aria-hidden className="size-5 text-primary" />{loading ? "กำลังโหลดรายชื่อ" : `${filtered.length} สมาชิก`}</p>
+        <div className="relative w-full sm:max-w-72">
+          <Search aria-hidden className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input type="search" value={query} disabled={loading} onChange={(event) => { setQuery(event.target.value); setPage(1); }} aria-label="ค้นหาสมาชิก" placeholder="ค้นหาชื่อ ตำแหน่ง หรือกลุ่มงาน" className="pl-10 text-base" />
+        </div>
       </div>
 
       {loading ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {[0, 1, 2].map((item) => <Card key={item} className="rounded-xl border-[#e9e7ed] shadow-none"><CardContent className="flex items-center gap-4 p-5"><Skeleton className="size-12 rounded-full" /><div className="flex-1 space-y-2"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-3 w-1/2" /></div></CardContent></Card>)}
         </div>
-      ) : people.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <Card className="rounded-xl border-dashed border-[#dcd8e2] bg-white shadow-none"><CardContent className="px-6 py-14 text-center">
           <span className="mx-auto grid size-11 place-items-center rounded-full bg-[#f2eef6] text-[#704b8d]"><Users className="size-5" /></span>
-          <h2 className="mt-4 text-base font-semibold text-[#463a50]">ยังไม่มีสมาชิกในทีม</h2>
-          <p className="mt-1 text-sm text-[#817888]">รายชื่อจะแสดงเมื่อมีผู้ใช้ที่ได้รับสิทธิ์ในระบบ</p>
+          <h2 className="mt-4 text-xl font-bold text-[#463a50]">{search ? "ไม่พบสมาชิกที่ตรงกับคำค้น" : "ยังไม่มีสมาชิกในทีม"}</h2>
         </CardContent></Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {people.map((person) => (
-            <Card className="rounded-xl border-[#e9e7ed] shadow-none" key={person.id}>
+        <>
+        <div className="grid items-start gap-4 md:grid-cols-2 2xl:grid-cols-3">
+          {filtered.slice(offset, offset + TABLE_PAGE_SIZE).map((person) => (
+            <Card className="border-t-2 border-t-[#d9c7df]" key={person.id}>
               <CardContent className="p-4 sm:p-5">
                 <div className="flex min-w-0 items-center gap-3">
                   <Avatar className="size-12 shrink-0 rounded-full ring-1 ring-[#e9e7ed]">
@@ -50,8 +61,8 @@ export default function TeamDirectory({ people, loading = false }: { people: Tea
                     <AvatarFallback className="bg-[#f2edf7] text-base font-semibold text-[#694786]">{person.name.trim().slice(0, 1) || "?"}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">
-                    <h2 className="truncate text-sm font-semibold text-[#3f3449] sm:text-base">{person.name}</h2>
-                    <p className="mt-1 truncate text-sm text-[#817888]">{person.position || "ยังไม่ระบุตำแหน่ง"}{person.positionLevel ? ` · ${person.positionLevel}` : ""}</p>
+                    <h2 className="wrap-break-word text-xl font-bold leading-tight text-[#3f3449]">{person.name}</h2>
+                    <p className="mt-0.5 wrap-break-word text-base leading-tight text-muted-foreground">{person.position || "ยังไม่ระบุตำแหน่ง"}{person.positionLevel ? ` · ${person.positionLevel}` : ""}</p>
                   </div>
                 </div>
 
@@ -61,19 +72,21 @@ export default function TeamDirectory({ people, loading = false }: { people: Tea
                   {person.systemRole === "USER" && person.capabilities.length === 0 && <Badge variant="outline" className="rounded-full border-[#e8e4ec] text-[#817888]">ยังไม่มีบทบาทงานวิจัย</Badge>}
                 </div>
 
-                <div className="mt-4 grid gap-3 rounded-lg bg-[#f8f7fa] p-3.5">
+                <div className="mt-4 grid gap-3 rounded-lg bg-[#f7f3ee] p-3.5">
                   <Detail icon={BriefcaseBusiness} label="ภารกิจ" value={person.mission || "ยังไม่ระบุ"} />
                   <Detail icon={Building2} label="กลุ่มงาน" value={person.workGroup || "ยังไม่ระบุ"} />
                 </div>
 
-                <div className="mt-4 border-t border-[#efedf2] pt-3.5">
-                  <div className="text-xs font-medium text-[#797280]">ลายเซ็นในโปรไฟล์</div>
-                  {person.signatureUrl ? <Image src={person.signatureUrl} alt={`ลายเซ็น ${person.name}`} width={400} height={100} unoptimized className="mt-2 h-14 w-full object-contain object-left" /> : <p className="mt-2 text-sm text-[#9a92a2]">ยังไม่มีลายเซ็น</p>}
-                </div>
+                {person.signatureUrl && <details className="group mt-4 border-t border-[#ece6e1] pt-2">
+                  <summary className="flex min-h-9 cursor-pointer list-none items-center justify-between gap-2 rounded text-base font-bold text-primary focus-visible:outline-2 focus-visible:outline-primary [&::-webkit-details-marker]:hidden">ลายเซ็นในโปรไฟล์ <ChevronDown aria-hidden className="size-4 group-open:rotate-180" /></summary>
+                  <Image src={person.signatureUrl} alt={`ลายเซ็น ${person.name}`} width={400} height={100} unoptimized loading="lazy" className="mt-2 h-14 w-full object-contain object-left" />
+                </details>}
               </CardContent>
             </Card>
           ))}
         </div>
+        <Card><TablePagination page={page} total={filtered.length} onPageChange={setPage} /></Card>
+        </>
       )}
     </section>
   );
@@ -83,7 +96,7 @@ function Detail({ icon: Icon, label, value }: { icon: typeof BriefcaseBusiness; 
   return (
     <div className="flex min-w-0 items-start gap-2.5">
       <Icon className="mt-0.5 size-4 shrink-0 text-[#8d8298]" />
-      <div className="min-w-0"><div className="text-xs text-[#8a8292]">{label}</div><div className="mt-0.5 break-words text-sm font-medium leading-5 text-[#564b60]">{value}</div></div>
+      <div className="min-w-0"><div className="text-sm text-muted-foreground">{label}</div><div className="wrap-break-word text-base font-bold leading-tight">{value}</div></div>
     </div>
   );
 }

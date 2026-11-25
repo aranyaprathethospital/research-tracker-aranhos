@@ -13,9 +13,12 @@ export const reviewLabels: Record<ReviewStatus, string> = {
   "อนุมัติ": "ดำเนินการการเสร็จสิ้น",
 };
 
-const progressWidths = ["w-[0%]", "w-[5%]", "w-[10%]", "w-[15%]", "w-[20%]", "w-[25%]", "w-[30%]", "w-[35%]", "w-[40%]", "w-[45%]", "w-[50%]", "w-[55%]", "w-[60%]", "w-[65%]", "w-[70%]", "w-[75%]", "w-[80%]", "w-[85%]", "w-[90%]", "w-[95%]", "w-full"] as const;
+const bangkokDate = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" });
+const bangkokTimestamp = new Intl.DateTimeFormat("th-TH-u-ca-buddhist", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Bangkok", hourCycle: "h23" });
 
-export const dayDiff = (date: string) => differenceInCalendarDays(parseISO(date), new Date());
+export const dayDiff = (date: string) => differenceInCalendarDays(parseISO(date), parseISO(bangkokDate.format(new Date())));
+
+export const formatCommentDate = (date: string) => bangkokTimestamp.format(new Date(date));
 
 export const formatThaiDate = (date: string, withYear = false) => format(parseISO(date), withYear ? "d MMM yyyy" : "d MMM", { locale: th });
 
@@ -32,6 +35,17 @@ export function StageBadge({ stage }: { stage: number }) { return <Badge variant
 
 export function ReviewBadge({ status }: { status: ReviewStatus }) { return <Badge variant="outline" className={`h-7 shrink-0 rounded-full px-2.5 text-xs font-semibold ${reviewTone(status)}`}>{reviewLabels[status]}</Badge>; }
 
-export function DueDate({ date }: { date: string }) { const diff = dayDiff(date); return <span className={`inline-flex items-center gap-1.5 whitespace-nowrap text-sm ${diff < 0 ? "font-semibold text-[#a74d42]" : diff <= 7 ? "font-semibold text-[#996b2d]" : "text-[#746c7d]"}`}><CalendarDays className="size-3.5" />{formatThaiDate(date)}</span>; }
+export function DueDate({ date }: { date: string }) {
+  if (!date) return <span className="whitespace-nowrap text-sm text-muted-foreground">ไม่ระบุกำหนด</span>;
+  const diff = dayDiff(date);
+  return <time dateTime={date} className={`inline-flex items-center gap-1.5 whitespace-nowrap text-base ${diff < 0 ? "font-bold text-[#a74d42]" : diff <= 7 ? "font-bold text-[#805b27]" : "text-[#746c7d]"}`}><CalendarDays aria-hidden className="size-3.5" />{formatThaiDate(date)}</time>;
+}
 
-export function Progress({ value }: { value: number }) { const width = progressWidths[Math.round(Math.min(100, Math.max(0, value)) / 5)] ?? "w-[0%]"; return <span className="flex min-w-24 flex-1 items-center gap-2"><span className="h-2 min-w-12 flex-1 overflow-hidden rounded-full bg-[#efedf2]"><span className={`block h-full rounded-full bg-[#765196] transition-[width] duration-300 ${width}`} /></span><span className="w-9 text-right text-sm font-semibold tabular-nums text-[#62586c]">{value}%</span></span>; }
+export function Progress({ value }: { value: number }) {
+  return (
+    <span className="flex min-w-24 flex-1 items-center gap-2">
+      <progress aria-label="ความคืบหน้า" max={100} value={value} className="block h-1.5 min-w-12 flex-1 appearance-none overflow-hidden rounded-full bg-secondary [&::-moz-progress-bar]:rounded-full [&::-moz-progress-bar]:bg-primary [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-bar]:bg-secondary [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-primary" />
+      <span aria-hidden className="w-9 text-right text-base font-bold tabular-nums text-[#62586c]">{value}%</span>
+    </span>
+  );
+}

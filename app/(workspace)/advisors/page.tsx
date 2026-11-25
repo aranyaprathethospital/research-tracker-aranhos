@@ -31,7 +31,7 @@ async function AdvisorSummaryContent() {
   if (!credential) redirect("/account/setup");
   if (profile.capabilities.length > 1 && !activeMode) redirect("/choose-role");
 
-  const [assignments, projectCount, commentCount] = await Promise.all([
+  const [assignments, projectCount] = await Promise.all([
     prisma.researchProjectAdvisor.findMany({
       where: { assignmentType: "PRIMARY" },
       select: {
@@ -44,7 +44,6 @@ async function AdvisorSummaryContent() {
       orderBy: { project: { updatedAt: "desc" } },
     }),
     prisma.researchProject.count(),
-    prisma.advisorComment.count(),
   ]);
   const byAdvisor = new Map<string, AdvisorWorkload>();
   for (const { advisor, project } of assignments) {
@@ -70,7 +69,6 @@ async function AdvisorSummaryContent() {
       systemRole={profile.systemRole}
       availableRoles={profile.capabilities.map(({ capability }) => capability === "ADVISOR" ? "Advisor" : "Advisee")}
       projectCount={projectCount}
-      commentCount={commentCount}
     >
       <AdvisorSummary advisors={advisors} />
     </WorkspaceShell>

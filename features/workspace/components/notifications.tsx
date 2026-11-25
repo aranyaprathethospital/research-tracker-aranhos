@@ -58,7 +58,7 @@ export function NotificationBell() {
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger aria-label={unread ? `การแจ้งเตือน ยังไม่อ่าน ${unread} รายการ` : "การแจ้งเตือน"}
-        className="relative grid size-10 place-items-center rounded-xl border border-border bg-white text-primary hover:bg-secondary focus-visible:outline-2 focus-visible:outline-primary">
+        className="relative grid size-11 place-items-center rounded-lg border border-[#e7e0d9] bg-white text-primary hover:bg-secondary focus-visible:outline-2 focus-visible:outline-primary">
         <Bell aria-hidden className="size-5" />
         {unread > 0 && <span aria-hidden className="absolute -right-1 -top-1 grid min-h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[11px] font-bold text-white">{unread > 99 ? "99+" : unread}</span>}
       </Popover.Trigger>
@@ -129,22 +129,22 @@ export function NotificationFeed({ compact = false, onNavigate, onUnread }: {
   const rows = compact ? feed?.items.slice(0, 6) : feed?.items;
 
   return (
-    <section aria-label="รายการแจ้งเตือน" className="overflow-hidden rounded-2xl bg-white">
-      <div className="flex items-center justify-between gap-2 border-b border-border bg-[#f8f3fb] px-4 py-3">
-        <h2 className="flex items-center gap-2 text-base font-bold"><Bell aria-hidden className="size-4 text-primary" /> การแจ้งเตือน</h2>
+    <section aria-label="รายการแจ้งเตือน" className="overflow-hidden bg-white">
+      <div className="flex items-center justify-between gap-2 border-b border-[#e7e0d9] bg-[#fffcf8] px-4 py-3">
+        <h2 className="flex items-center gap-2 text-xl font-bold"><Bell aria-hidden className="size-4 text-primary" /> {compact ? "การแจ้งเตือน" : "กิจกรรมล่าสุด"}</h2>
         <Button size="sm" variant="ghost" disabled={busy || !feed?.unread} onClick={() => void mark()}>อ่านทั้งหมด</Button>
       </div>
       {error ? <div className="p-5 text-center"><p role="alert">เชื่อมต่อระบบแจ้งเตือนไม่สำเร็จ</p><Button variant="ghost" onClick={reload}>ลองอีกครั้ง</Button></div>
         : !rows ? <p role="status" className="p-5 text-center text-muted-foreground">กำลังโหลดการแจ้งเตือน…</p>
-        : rows.length === 0 ? <p className="p-6 text-center text-muted-foreground">ยังไม่มีการแจ้งเตือน</p>
+        : rows.length === 0 ? <p className="grid justify-items-center gap-2 p-8 text-center text-lg text-muted-foreground"><Bell aria-hidden className="size-6 text-primary" />ยังไม่มีการแจ้งเตือน</p>
         : <ul className={compact ? "max-h-[min(25rem,52svh)] divide-y divide-border overflow-y-auto" : "divide-y divide-border"}>
           {rows.map((notice) => {
             const Icon = notice.kind === "review" ? MessageCircle : UsersRound;
             return <li key={notice.id}>
-              <button type="button" disabled={busy} onClick={() => void mark(notice)} className={`flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-secondary/70 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary ${notice.readAt ? "" : "bg-[#fcf7ff]"}`}>
+              <button type="button" disabled={busy} onClick={() => void mark(notice)} className={`flex w-full items-start gap-3 px-4 py-4 text-left hover:bg-[#f7f1f6] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary ${notice.readAt ? "" : "border-l-2 border-l-primary bg-[#faf5fa]"}`}>
                 <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-secondary text-primary"><Icon aria-hidden className="size-4" /></span>
                 <span className="min-w-0 flex-1">
-                  <span className="block wrap-break-word font-semibold">{notice.message}</span>
+                  <span className="block wrap-break-word text-lg font-bold leading-tight">{notice.message}</span>
                   <span className="block wrap-break-word text-muted-foreground">{notice.projectTitle}</span>
                   <time className="text-sm text-muted-foreground" dateTime={notice.createdAt}>{timestamp.format(new Date(notice.createdAt))} น.</time>
                   {!notice.readAt && <span className="ml-2 text-sm font-semibold text-primary">ยังไม่อ่าน</span>}

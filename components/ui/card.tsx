@@ -11,7 +11,7 @@ function Card({
       data-slot="card"
       data-size={size}
       className={cn(
-        "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl border border-[#e9e7ed] bg-white py-0 text-sm text-foreground shadow-none [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
+        "group/card flex flex-col gap-0 overflow-hidden rounded-xl border border-[#e6e0da] bg-white py-0 text-base text-foreground [--card-spacing:--spacing(5)] data-[size=sm]:[--card-spacing:--spacing(3)]",
         className
       )}
       {...props}
@@ -37,7 +37,7 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-title"
       className={cn(
-        "font-heading text-base leading-snug font-medium group-data-[size=sm]/card:text-sm",
+        "font-heading text-xl font-bold leading-tight group-data-[size=sm]/card:text-base",
         className
       )}
       {...props}
@@ -49,7 +49,7 @@ function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-description"
-      className={cn("text-sm text-oklch(0.556 0 0) dark:text-oklch(0.708 0 0)", className)}
+      className={cn("text-base leading-snug text-muted-foreground", className)}
       {...props}
     />
   )

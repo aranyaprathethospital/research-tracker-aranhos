@@ -121,7 +121,7 @@ function SelectItem({
       )}
       {...props}
     >
-      <SelectPrimitive.ItemText className="flex flex-1 shrink-0 gap-2 whitespace-nowrap">
+      <SelectPrimitive.ItemText data-slot="select-item-text" className="flex min-w-0 flex-1 gap-2 whitespace-nowrap">
         {children}
       </SelectPrimitive.ItemText>
       <SelectPrimitive.ItemIndicator
@@ -186,9 +186,31 @@ function SelectScrollDownButton({
   )
 }
 
+function SelectField<Value extends string>({ label, value, options, disabled, onChange }: {
+  label: string
+  value: Value
+  options: ReadonlyArray<{ label: string; value: Value }>
+  disabled?: boolean
+  onChange: (value: Value) => void
+}) {
+  return (
+    <Select items={options} value={value} disabled={disabled} onValueChange={(next) => { if (next !== null) onChange(next) }}>
+      <SelectTrigger aria-label={label} className="w-full min-w-0 border-[#e4dcd7] bg-white px-3 text-base font-bold text-foreground data-[size=default]:h-11">
+        <SelectValue className="min-w-0" />
+      </SelectTrigger>
+      <SelectContent alignItemWithTrigger={false} sideOffset={6} className="min-w-0 border border-[#e7e0d9] p-1 shadow-lg">
+        {options.map((option) => (
+          <SelectItem key={option.value} value={option.value} className="min-h-10 cursor-pointer px-2.5 pr-8 text-base focus:bg-secondary focus:text-primary [&_[data-slot=select-item-text]]:whitespace-normal">{option.label}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
+
 export {
   Select,
   SelectContent,
+  SelectField,
   SelectGroup,
   SelectItem,
   SelectLabel,

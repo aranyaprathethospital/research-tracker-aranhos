@@ -24,6 +24,17 @@ export function ProjectListLoading() {
   return <WorkspaceLoading label="กำลังโหลดรายการงานวิจัย"><ListSkeleton /></WorkspaceLoading>;
 }
 
+export function CommentsLoading() {
+  return (
+    <WorkspaceLoading label="กำลังโหลดความเห็น">
+      <div className="divide-y divide-[#e7e0d9] rounded-xl border border-[#e7e0d9] bg-white">
+        <div className="flex flex-wrap justify-between gap-3 p-5"><Placeholder className="h-7 w-36" /><Placeholder className="h-10 w-full sm:w-60" /></div>
+        {[0, 1, 2].map((index) => <div key={index} className="flex gap-3 p-5"><Placeholder className="size-9 shrink-0 rounded-full" /><div className="flex-1 space-y-2"><Placeholder className="h-4 w-32 max-w-full" /><Placeholder className="h-5 w-3/4" /></div></div>)}
+      </div>
+    </WorkspaceLoading>
+  );
+}
+
 export function TeamLoading() {
   return (
     <WorkspaceLoading label="กำลังโหลดทีมวิจัย">
@@ -39,13 +50,11 @@ export function DashboardLoading() {
     <WorkspaceLoading label="กำลังโหลดภาพรวมงานวิจัย">
       <div className="space-y-5">
         <SummaryLoading />
-        <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_340px]">
-          <ListSkeleton />
-          <div className="space-y-4 rounded-xl border border-border bg-white p-5">
-            <Placeholder className="h-6 w-32" />
-            <Placeholder className="h-12" /><Placeholder className="h-12" />
-          </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          {[0, 1].map((index) => <div key={index} className="space-y-3 rounded-xl border border-[#e7e0d9] bg-white p-4"><Placeholder className="h-6 w-36" /><Placeholder className="h-11" /></div>)}
         </div>
+        <Placeholder className="h-8 w-48" />
+        <div className="grid gap-4 xl:grid-cols-2">{[0, 1].map((index) => <Placeholder key={index} className="h-48 rounded-xl" />)}</div>
       </div>
     </WorkspaceLoading>
   );
@@ -56,7 +65,6 @@ export function UsersLoading() {
     <WorkspaceLoading label="กำลังตรวจสอบสิทธิ์และโหลดรายชื่อผู้ใช้">
       <div className="space-y-5">
         <SummaryLoading />
-        <Placeholder className="h-14" />
         <ListSkeleton />
       </div>
     </WorkspaceLoading>

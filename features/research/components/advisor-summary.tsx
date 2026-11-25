@@ -1,14 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { getCoreRowModel, getPaginationRowModel, useLegacyTable, type LegacyColumnDef } from "@tanstack/react-table/legacy";
-import { ChevronDown, UsersRound } from "lucide-react";
+import { ArrowUpRight, ChevronRight, UsersRound } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TablePagination, TABLE_PAGE_SIZE } from "@/components/ui/table-pagination";
 import PageHeading from "@/features/workspace/components/page-heading";
 import { stages } from "@/lib/research-types";
 import { DueDate, Progress, StageBadge } from "./project-display";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export type AdvisorWorkload = {
   id: string;
@@ -55,19 +57,19 @@ export default function AdvisorSummary({ advisors }: { advisors: AdvisorWorkload
   return (
     <>
       <PageHeading eyebrow="จัดการระบบ" title="สรุปที่ปรึกษาหลัก" description="ดูจำนวนโครงการและความคืบหน้าของที่ปรึกษาหลักแต่ละคน" />
-      <dl className="mb-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <dl className="mb-5 grid grid-cols-2 overflow-hidden rounded-xl border border-[#e7e0d9] bg-[#fffcf8] divide-[#e7e0d9] xl:grid-cols-4 xl:divide-x">
         {metrics.map(({ label, value }) => (
-          <div key={label} className="rounded-2xl border border-border bg-white p-4 sm:p-5">
-            <dt className="text-sm text-muted-foreground">{label}</dt>
-            <dd className="mt-2 text-2xl font-semibold tabular-nums text-primary sm:text-3xl">{value}</dd>
+          <div key={label} className="border-[#e7e0d9] p-4 first:border-r second:border-b nth-3:border-r nth-3:border-t sm:p-5 xl:border-0">
+            <dt className="text-base font-bold text-muted-foreground">{label}</dt>
+            <dd className="mt-2 text-4xl font-bold leading-none tabular-nums text-primary">{value}</dd>
           </div>
         ))}
       </dl>
 
-      <section aria-labelledby="advisor-list-title" className="overflow-hidden rounded-2xl border border-border bg-white">
+      <section aria-labelledby="advisor-list-title" className="overflow-hidden rounded-xl border border-[#e7e0d9] bg-white">
         <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border p-4 sm:p-5">
           <div>
-            <h2 id="advisor-list-title" className="flex items-center gap-2 font-semibold"><UsersRound aria-hidden className="size-5 text-primary" /> รายชื่อที่ปรึกษาหลัก</h2>
+            <h2 id="advisor-list-title" className="flex items-center gap-2 text-2xl font-bold"><UsersRound aria-hidden className="size-5 text-primary" /> รายชื่อที่ปรึกษาหลัก</h2>
             <p className="mt-1 text-sm text-muted-foreground">เลือกชื่อเพื่อดูขั้นตอนและกำหนดส่งของแต่ละโครงการ</p>
           </div>
           <label className="block w-full space-y-1.5 text-sm font-medium sm:w-64">
@@ -85,7 +87,7 @@ export default function AdvisorSummary({ advisors }: { advisors: AdvisorWorkload
             <div className="md:hidden">
               <ul className="divide-y divide-border">
                 {visible.map(({ original: advisor }) => <li key={advisor.id} className="space-y-2 p-4">
-                  <AdvisorButton advisor={advisor} selected={selectedId === advisor.id} onClick={() => setSelectedId(selectedId === advisor.id ? null : advisor.id)} />
+                  <AdvisorButton advisor={advisor} onClick={() => setSelectedId(advisor.id)} />
                   <p className="text-sm text-muted-foreground">{advisor.projects.length} โครงการ · ถึงขั้นนำเสนอ {advisor.projects.filter((project) => project.stage === stages.length - 1).length}</p>
                   <Progress value={averageProgress(advisor.projects)} />
                 </li>)}
@@ -99,7 +101,7 @@ export default function AdvisorSummary({ advisors }: { advisors: AdvisorWorkload
                 <TableBody>
                   {visible.map(({ original: advisor }) => (
                     <TableRow key={advisor.id} data-state={selectedId === advisor.id ? "selected" : undefined}>
-                      <TableCell><AdvisorButton advisor={advisor} selected={selectedId === advisor.id} onClick={() => setSelectedId(selectedId === advisor.id ? null : advisor.id)} /></TableCell>
+                      <TableCell><AdvisorButton advisor={advisor} onClick={() => setSelectedId(advisor.id)} /></TableCell>
                       <TableCell className="tabular-nums">{advisor.projects.length}</TableCell>
                       <TableCell className="tabular-nums">{advisor.projects.filter((project) => project.stage === stages.length - 1).length}</TableCell>
                       <TableCell className="min-w-36"><Progress value={averageProgress(advisor.projects)} /></TableCell>
@@ -116,14 +118,18 @@ export default function AdvisorSummary({ advisors }: { advisors: AdvisorWorkload
         )}
       </section>
       {selected && (
-        <section id="advisor-projects" className="mt-5 rounded-2xl border border-border bg-white p-4 sm:p-5">
-          <h2 className="mb-4 text-lg font-semibold">โครงการที่ {selected.name} ดูแล</h2>
-          <ul className="grid gap-3 lg:grid-cols-2">
+        <Dialog open onOpenChange={(open) => { if (!open) setSelectedId(null); }}>
+          <DialogContent className="max-h-[90svh] grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0 sm:max-w-2xl">
+            <DialogHeader className="border-b border-[#e7e0d9] bg-[#fffcf8] p-5 pr-14">
+              <DialogTitle className="wrap-break-word text-3xl font-bold">โครงการของ {selected.name}</DialogTitle>
+              <DialogDescription>ดูแล {selected.projects.length} โครงการในฐานะที่ปรึกษาหลัก</DialogDescription>
+            </DialogHeader>
+            <ul className="min-h-0 divide-y divide-[#eee8e2] overflow-y-auto overscroll-contain">
             {selected.projects.map((project) => (
-              <li key={project.id} className="min-w-0 space-y-3 rounded-xl border border-border bg-[#faf8fc] p-4">
+              <li key={project.id} className="min-w-0 space-y-3 px-5 py-4">
                 <div>
-                  <h3 className="wrap-break-word font-semibold">{project.title}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">{project.advisee}</p>
+                  <h3><Link href={`/projects?project=${encodeURIComponent(project.id)}`} onNavigate={() => setSelectedId(null)} className="inline-flex items-center gap-2 rounded text-lg font-bold text-primary hover:underline focus-visible:outline-2 focus-visible:outline-primary"><span className="wrap-break-word">{project.title}</span><ArrowUpRight aria-hidden className="size-4 shrink-0" /></Link></h3>
+                  <p className="mt-1 text-base text-muted-foreground">{project.advisee}</p>
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <StageBadge stage={project.stage} />
@@ -132,16 +138,17 @@ export default function AdvisorSummary({ advisors }: { advisors: AdvisorWorkload
                 <Progress value={project.progress} />
               </li>
             ))}
-          </ul>
-        </section>
+            </ul>
+          </DialogContent>
+        </Dialog>
       )}
     </>
   );
 }
 
-function AdvisorButton({ advisor, selected, onClick }: { advisor: AdvisorWorkload; selected: boolean; onClick: () => void }) {
-  return <button type="button" aria-expanded={selected} aria-controls={selected ? "advisor-projects" : undefined} onClick={onClick} className="flex min-h-10 items-center gap-2 rounded-md text-left font-semibold text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+function AdvisorButton({ advisor, onClick }: { advisor: AdvisorWorkload; onClick: () => void }) {
+  return <button type="button" aria-haspopup="dialog" onClick={onClick} className="flex min-h-10 items-center gap-2 rounded-md text-left text-lg font-bold text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
     <span className="wrap-break-word">{advisor.name}</span>
-    <ChevronDown aria-hidden className={`size-4 shrink-0 motion-safe:transition-transform ${selected ? "rotate-180" : ""}`} />
+    <ChevronRight aria-hidden className="size-4 shrink-0" />
   </button>;
 }
